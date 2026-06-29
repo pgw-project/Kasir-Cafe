@@ -83,6 +83,17 @@ export default function App() {
         body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       });
 
+      if (!res.ok) {
+        const text = await res.text();
+        try {
+          const parsed = JSON.parse(text);
+          setAuthError(parsed.message || `Login gagal (Status: ${res.status}).`);
+        } catch {
+          setAuthError(`Koneksi gagal (${res.status}): ${text.substring(0, 80)}...`);
+        }
+        return;
+      }
+
       const data = await res.json();
       if (data.success) {
         setToken(data.token);
@@ -97,9 +108,9 @@ export default function App() {
       } else {
         setAuthError(data.message || 'Login gagal.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setAuthError('Koneksi ke server terputus.');
+      setAuthError(`Koneksi ke server terputus: ${err.message || err}`);
     }
   };
 
@@ -125,6 +136,17 @@ export default function App() {
         }),
       });
 
+      if (!res.ok) {
+        const text = await res.text();
+        try {
+          const parsed = JSON.parse(text);
+          setAuthError(parsed.message || `Pendaftaran gagal (Status: ${res.status}).`);
+        } catch {
+          setAuthError(`Koneksi gagal (${res.status}): ${text.substring(0, 80)}...`);
+        }
+        return;
+      }
+
       const data = await res.json();
       if (data.success) {
         setAuthSuccessMsg('Pendaftaran staf berhasil! Silakan login.');
@@ -140,9 +162,9 @@ export default function App() {
       } else {
         setAuthError(data.message || 'Pendaftaran gagal.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setAuthError('Kesalahan koneksi ke server.');
+      setAuthError(`Kesalahan koneksi ke server: ${err.message || err}`);
     }
   };
 
@@ -163,6 +185,17 @@ export default function App() {
         body: JSON.stringify({ email: forgotEmail, newPassword: forgotNewPassword }),
       });
 
+      if (!res.ok) {
+        const text = await res.text();
+        try {
+          const parsed = JSON.parse(text);
+          setAuthError(parsed.message || `Reset gagal (Status: ${res.status}).`);
+        } catch {
+          setAuthError(`Koneksi gagal (${res.status}): ${text.substring(0, 80)}...`);
+        }
+        return;
+      }
+
       const data = await res.json();
       if (data.success) {
         setAuthSuccessMsg(data.message || 'Sandi berhasil diubah. Silakan login.');
@@ -174,9 +207,9 @@ export default function App() {
       } else {
         setAuthError(data.message || 'Email tidak terdaftar.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setAuthError('Gagal menghubungi server.');
+      setAuthError(`Gagal menghubungi server: ${err.message || err}`);
     }
   };
 
