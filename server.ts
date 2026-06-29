@@ -386,8 +386,10 @@ async function startServer() {
   // Static serving for local uploads folder
   app.use('/uploads', express.static(UPLOADS_DIR));
 
-  // Initialize DB immediately from Firestore
-  await initDatabase();
+  // Initialize DB in background from Firestore to prevent blocking server startup
+  initDatabase().catch(err => {
+    console.error('[Database] Background database initialization failed:', err);
+  });
 
   // --- API ROUTES ---
 

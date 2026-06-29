@@ -23,12 +23,13 @@ if (getApps().length === 0) {
 export const firestore = getFirestore(firebaseConfig.firestoreDatabaseId);
 
 /**
- * Loads all data from Firestore collections.
- * Returns null if the collections are empty so we can fallback to local data or seed initial data.
+ * Loads all data from Firestore collections with a fast-failing timeout.
+ * Returns null if the collections are empty or unreachable, so we can fallback to local data or seed initial data.
  */
 export async function loadFromFirestore() {
   console.log('[Firestore] Fetching data from cloud Firestore...');
-  try {
+  
+  const fetchPromise = async () => {
     const collections = ['users', 'menus', 'transactions', 'transaction_details', 'activity_log'];
     const result: any = {};
     let totalDocs = 0;
@@ -60,8 +61,18 @@ export async function loadFromFirestore() {
     }
 
     return result;
+  };
+
+  try {
+    // 6 seconds timeout limit to prevent blocking server startup
+    return await Promise.race([
+      fetchPromise(),
+      new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error('Firestore connection timeout (6s)')), 6000)
+      )
+    ]);
   } catch (error) {
-    console.error('[Firestore] Error loading from Firestore:', error);
+    console.error('[Firestore] Error loading from Firestore (falling back):', error);
     return null;
   }
 }
@@ -79,8 +90,9 @@ export async function syncCollection(col: string, newItems: any[]) {
 
     const idKey = col === 'users' ? 'ID_User' :
                   col === 'menus' ? 'ID_Menu' :
-                  col === 'transactions' ? 'ID_Transaction' :
+                  col === 'transactions' ? 'ID_Transaksi' :
                   col === 'transaction_details' ? 'ID_Detail' :
+                  col === 'activity_log' ? 'Timestamp' :
                   'ID_Log';
 
     // 1. Get existing docs in Firestore for this collection
