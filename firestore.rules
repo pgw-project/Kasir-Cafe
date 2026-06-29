@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read & write access to all collections for this POS management application
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+    match /menus/{menuId} {
+      allow read, write: if true;
+    }
+    match /transactions/{transactionId} {
+      allow read, write: if true;
+    }
+    match /transaction_details/{detailId} {
+      allow read, write: if true;
+    }
+    match /activity_log/{logId} {
+      allow read, write: if true;
+    }
+    match /settings/{settingsId} {
+      allow read, write: if true;
+    }
+
+    // Default fallback rule
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

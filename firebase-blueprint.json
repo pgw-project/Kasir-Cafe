@@ -1,0 +1,119 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile for staff and administrators",
+      "type": "object",
+      "properties": {
+        "ID_User": { "type": "string" },
+        "Nama": { "type": "string" },
+        "Email": { "type": "string" },
+        "Password": { "type": "string" },
+        "Role": { "type": "string" },
+        "Status": { "type": "string" },
+        "Created_At": { "type": "string" }
+      },
+      "required": ["ID_User", "Nama", "Email", "Password", "Role", "Status", "Created_At"]
+    },
+    "Menu": {
+      "title": "Menu",
+      "description": "Menu items representing foods and beverages",
+      "type": "object",
+      "properties": {
+        "ID_Menu": { "type": "string" },
+        "Nama_Menu": { "type": "string" },
+        "Kategori": { "type": "string" },
+        "Harga": { "type": "number" },
+        "Foto_URL": { "type": "string" },
+        "Status": { "type": "string" },
+        "Created_At": { "type": "string" }
+      },
+      "required": ["ID_Menu", "Nama_Menu", "Kategori", "Harga", "Foto_URL", "Status", "Created_At"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Sales transaction records",
+      "type": "object",
+      "properties": {
+        "ID_Transaksi": { "type": "string" },
+        "Nama_Pelanggan": { "type": "string" },
+        "Tanggal": { "type": "string" },
+        "Subtotal": { "type": "number" },
+        "Pajak": { "type": "number" },
+        "Diskon": { "type": "number" },
+        "Total_Harga": { "type": "number" },
+        "Bayar": { "type": "number" },
+        "Kembali": { "type": "number" },
+        "Kasir": { "type": "string" },
+        "Metode_Pembayaran": { "type": "string" }
+      }
+    },
+    "TransactionDetail": {
+      "title": "TransactionDetail",
+      "description": "Itemized details of a sale transaction",
+      "type": "object",
+      "properties": {
+        "ID_Detail": { "type": "string" },
+        "ID_Transaksi": { "type": "string" },
+        "ID_Menu": { "type": "string" },
+        "Nama_Menu": { "type": "string" },
+        "Harga": { "type": "number" },
+        "Qty": { "type": "number" },
+        "Subtotal": { "type": "number" }
+      }
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Audit trail log of activities",
+      "type": "object",
+      "properties": {
+        "Timestamp": { "type": "string" },
+        "ID_User": { "type": "string" },
+        "Nama_User": { "type": "string" },
+        "Action": { "type": "string" },
+        "Module": { "type": "string" },
+        "Description": { "type": "string" }
+      }
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global settings for the POS store",
+      "type": "object",
+      "properties": {
+        "namaToko": { "type": "string" },
+        "alamat": { "type": "string" },
+        "telepon": { "type": "string" },
+        "pesanFooter": { "type": "string" },
+        "googleSpreadsheetId": { "type": "string" },
+        "googleDriveFolderId": { "type": "string" },
+        "autoSync": { "type": "boolean" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Store users collection"
+    },
+    "/menus/{menuId}": {
+      "schema": "Menu",
+      "description": "Store menus collection"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Store transactions collection"
+    },
+    "/transaction_details/{detailId}": {
+      "schema": "TransactionDetail",
+      "description": "Store transaction details collection"
+    },
+    "/activity_log/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Store activity logs collection"
+    },
+    "/settings/{settingsId}": {
+      "schema": "Settings",
+      "description": "Store configurations collection"
+    }
+  }
+}
