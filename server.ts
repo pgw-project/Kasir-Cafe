@@ -1059,8 +1059,11 @@ async function startServer() {
 
   // --- DEV & SPA FALLBACK SETUP ---
 
+  // Detect if we are running in production mode
+  const isProd = process.env.NODE_ENV === 'production' || fs.existsSync(path.join(process.cwd(), 'dist'));
+
   // Vite middleware for development
-  if (process.env.NODE_ENV !== 'production') {
+  if (!isProd) {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',
