@@ -1,0 +1,6 @@
+{
+  "name": "POS & Management - Kafe Maissy Coffee",
+  "description": "Sistem Kasir dan Manajemen Operasional Terintegrasi untuk Kafe Maissy Coffee",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
