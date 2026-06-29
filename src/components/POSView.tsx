@@ -228,9 +228,9 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
       } else {
         setErrorCheckout(result.message || 'Gagal menyimpan transaksi.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error during checkout API post:', err);
-      setErrorCheckout('Kesalahan koneksi ke server.');
+      setErrorCheckout(`Kesalahan koneksi ke server: ${err.message || err}`);
     }
   };
 

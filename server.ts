@@ -1060,7 +1060,7 @@ async function startServer() {
   // --- DEV & SPA FALLBACK SETUP ---
 
   // Detect if we are running in production mode
-  const isProd = process.env.NODE_ENV === 'production' || fs.existsSync(path.join(process.cwd(), 'dist'));
+  const isProd = process.env.NODE_ENV === 'production';
 
   // Vite middleware for development
   if (!isProd) {

@@ -173,9 +173,9 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
       } else {
         alert(result.message || 'Gagal menyimpan menu.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving menu:', err);
-      alert('Terjadi kesalahan koneksi ke server.');
+      alert(`Terjadi kesalahan koneksi ke server: ${err.message || err}`);
     }
   };
 
