@@ -260,7 +260,7 @@ function writeDB(data: any) {
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  const PORT = 3000;
 
   // Middleware for JSON parsing and bodies
   app.use(express.json({ limit: '10mb' }));
@@ -1059,8 +1059,10 @@ async function startServer() {
 
   // --- DEV & SPA FALLBACK SETUP ---
 
-  // Detect if we are running in production mode (requires both production env and built assets)
-  const isProd = process.env.NODE_ENV === 'production' && fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
+  // Detect if we are running in production mode (requires either production env, built assets, or bundled file run)
+  const isProd = process.env.NODE_ENV === 'production' || 
+                 fs.existsSync(path.join(process.cwd(), 'dist', 'index.html')) ||
+                 (typeof __filename !== 'undefined' && __filename.endsWith('server.cjs'));
 
   // Vite middleware for development
   if (!isProd) {
