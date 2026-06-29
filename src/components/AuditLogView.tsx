@@ -26,6 +26,14 @@ export default function AuditLogView() {
 
   useEffect(() => {
     fetchLogs();
+
+    const handleUpdate = () => {
+      fetchLogs();
+    };
+    window.addEventListener('ws_db_update', handleUpdate);
+    return () => {
+      window.removeEventListener('ws_db_update', handleUpdate);
+    };
   }, []);
 
   const filteredLogs = logs.filter((log) => 

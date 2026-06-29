@@ -33,6 +33,14 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
 
   useEffect(() => {
     fetchAnalytics();
+
+    const handleUpdate = () => {
+      fetchAnalytics();
+    };
+    window.addEventListener('ws_db_update', handleUpdate);
+    return () => {
+      window.removeEventListener('ws_db_update', handleUpdate);
+    };
   }, []);
 
   if (loading) {

@@ -7,7 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Coffee, LayoutDashboard, ShoppingCart, BookOpen, Users, 
   FileText, Settings as SettingsIcon, LogOut, Menu as Hamburger, 
-  X, Lock, Mail, UserCheck, ShieldAlert, KeyRound, Sparkles, AlertCircle
+  X, Lock, Mail, UserCheck, ShieldAlert, KeyRound, Sparkles, AlertCircle,
+  MessageSquare, Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -54,6 +55,119 @@ export default function App() {
   // Page layout states
   const [activePage, setActivePage] = useState<'dashboard' | 'pos' | 'menu' | 'users' | 'reports' | 'logs' | 'settings'>('dashboard');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // --- REAL-TIME WEBSOCKET STATES & HOOKS ---
+  const [presenceUsers, setPresenceUsers] = useState<any[]>([]);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [wsSocket, setWsSocket] = useState<WebSocket | null>(null);
+  const [wsStatus, setWsStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [newMessage, setNewMessage] = useState('');
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (!currentUser) {
+      if (wsSocket) {
+        wsSocket.close();
+        setWsSocket(null);
+      }
+      setPresenceUsers([]);
+      setChatMessages([]);
+      return;
+    }
+
+    let socket: WebSocket | null = null;
+    let reconnectTimeout: any = null;
+    let pingInterval: any = null;
+
+    const connectWS = () => {
+      setWsStatus('connecting');
+      const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${proto}//${window.location.host}`;
+      
+      const ws = new WebSocket(wsUrl);
+      socket = ws;
+      setWsSocket(ws);
+
+      ws.onopen = () => {
+        setWsStatus('connected');
+        ws.send(JSON.stringify({
+          type: 'identify',
+          user: currentUser,
+          currentView: activePage,
+        }));
+
+        pingInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 15000);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'presence') {
+            setPresenceUsers(data.users);
+          } else if (data.type === 'chat_history') {
+            setChatMessages(data.history);
+          } else if (data.type === 'chat') {
+            setChatMessages(prev => {
+              if (prev.some(m => m.id === data.message.id)) return prev;
+              return [...prev, data.message].slice(-50);
+            });
+            
+            setIsChatOpen(open => {
+              if (!open) {
+                setUnreadCount(c => c + 1);
+              }
+              return open;
+            });
+            
+            const ev = new CustomEvent('ws_chat', { detail: data.message });
+            window.dispatchEvent(ev);
+          } else if (data.type === 'db_update') {
+            const ev = new CustomEvent('ws_db_update', { detail: data });
+            window.dispatchEvent(ev);
+          }
+        } catch (err) {
+          console.error('Error parsing websocket message:', err);
+        }
+      };
+
+      ws.onclose = () => {
+        setWsStatus('disconnected');
+        clearInterval(pingInterval);
+        reconnectTimeout = setTimeout(() => {
+          if (currentUser) connectWS();
+        }, 3000);
+      };
+
+      ws.onerror = (err) => {
+        console.error('WebSocket client error:', err);
+        ws.close();
+      };
+    };
+
+    connectWS();
+
+    return () => {
+      if (socket) {
+        socket.close();
+      }
+      clearTimeout(reconnectTimeout);
+      clearInterval(pingInterval);
+    };
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (wsSocket && wsSocket.readyState === WebSocket.OPEN) {
+      wsSocket.send(JSON.stringify({
+        type: 'change_view',
+        currentView: activePage,
+      }));
+    }
+  }, [activePage, wsSocket]);
 
   // Apply Theme
   useEffect(() => {
@@ -582,6 +696,36 @@ export default function App() {
             </div>
           </div>
 
+          {/* Realtime Active Presence Users */}
+          {presenceUsers.length > 1 && (
+            <div className="p-3 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 space-y-2 bg-emerald-500/5">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">Staf Aktif ({presenceUsers.length})</span>
+              </div>
+              <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
+                {presenceUsers
+                  .filter(u => u.ID_User !== currentUser.ID_User)
+                  .map((u, i) => (
+                    <div key={i} className="flex items-center justify-between text-[11px]">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 text-[10px] font-bold flex items-center justify-center shrink-0">
+                          {u.Nama.charAt(0)}
+                        </div>
+                        <div className="min-w-0 text-left">
+                          <span className="font-semibold text-zinc-700 dark:text-zinc-300 block truncate leading-tight">{u.Nama}</span>
+                          <span className="text-[9px] text-zinc-400 dark:text-zinc-500 block capitalize leading-none">{u.Role}</span>
+                        </div>
+                      </div>
+                      <span className="text-[9px] text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-[#1a1613] px-1.5 py-0.5 rounded shrink-0">
+                        {u.currentView === 'pos' ? 'POS' : u.currentView === 'menu' ? 'Menu' : u.currentView === 'users' ? 'Staf' : u.currentView === 'reports' ? 'Laporan' : u.currentView === 'logs' ? 'Log' : u.currentView === 'settings' ? 'Setelan' : 'Dashboard'}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {/* Navigation Links List */}
           <nav className="space-y-1">
             {allowedLinks.map((link) => {
@@ -642,6 +786,117 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* Floating Realtime Staff Chat Widget */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+        <AnimatePresence>
+          {isChatOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 50, scale: 0.95 }}
+              className="w-80 h-96 bg-white dark:bg-[#110e0c] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden mb-3"
+            >
+              {/* Chat Header */}
+              <div className="px-4 py-3 bg-amber-600 text-white flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  <span className="font-bold text-xs">Pesan Instan Staf</span>
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                </div>
+                <button
+                  id="close-chat"
+                  onClick={() => setIsChatOpen(false)}
+                  className="p-1 rounded-lg hover:bg-white/10 text-white/80 transition"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-zinc-50 dark:bg-[#1a1613]">
+                {chatMessages.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-4">
+                    <MessageSquare className="h-8 w-8 text-zinc-300 dark:text-zinc-700 mb-1" />
+                    <p className="text-xs text-zinc-400 dark:text-zinc-600">Belum ada obrolan. Mulai sapa rekan kerja Anda!</p>
+                  </div>
+                ) : (
+                  chatMessages.map((msg) => {
+                    const isSelf = msg.user.ID_User === currentUser.ID_User;
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex flex-col ${isSelf ? 'items-end' : 'items-start'}`}
+                      >
+                        <span className="text-[9px] text-zinc-400 dark:text-zinc-500 font-medium mb-0.5 px-1">
+                          {msg.user.Nama} ({msg.user.Role})
+                        </span>
+                        <div
+                          className={`max-w-[85%] px-3 py-2 rounded-xl text-xs break-all shadow-xs text-left
+                            ${isSelf
+                              ? 'bg-amber-600 text-white rounded-tr-none'
+                              : 'bg-white dark:bg-[#221e1a] text-zinc-800 dark:text-zinc-200 border border-zinc-100 dark:border-zinc-800 rounded-tl-none'}`}
+                        >
+                          {msg.message}
+                        </div>
+                        <span className="text-[8px] text-zinc-400/80 dark:text-zinc-500/80 mt-0.5 px-1">
+                          {new Date(msg.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Chat Input */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newMessage.trim() || !wsSocket) return;
+                  wsSocket.send(JSON.stringify({
+                    type: 'chat',
+                    message: newMessage.trim(),
+                  }));
+                  setNewMessage('');
+                }}
+                className="p-3 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#110e0c] flex gap-2 shrink-0"
+              >
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Ketik pesan..."
+                  className="flex-1 px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs bg-zinc-50 dark:bg-[#1a1613] text-zinc-800 dark:text-zinc-200 focus:outline-none focus:border-amber-600"
+                />
+                <button
+                  type="submit"
+                  disabled={!newMessage.trim()}
+                  className="p-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl transition cursor-pointer"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Chat Toggle Button */}
+        <button
+          id="toggle-chat-drawer"
+          onClick={() => {
+            setIsChatOpen(!isChatOpen);
+            setUnreadCount(0);
+          }}
+          className="p-3.5 bg-amber-600 hover:bg-amber-700 text-white rounded-full shadow-lg hover:shadow-xl transition flex items-center justify-center cursor-pointer relative"
+        >
+          <MessageSquare className="h-5.5 w-5.5" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[9px] font-bold h-5 w-5 rounded-full flex items-center justify-center animate-bounce">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

@@ -6,8 +6,11 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import http from 'http';
+import { WebSocketServer, WebSocket } from 'ws';
 import { createServer as createViteServer } from 'vite';
 import { User, Menu, Transaction, TransactionDetail, ActivityLog, Settings } from './src/types.js';
+import { loadFromFirestore, syncCollection, syncFullDatabase } from './firebase-server.js';
 
 const DB_PATH = path.join(process.cwd(), 'database.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
@@ -231,31 +234,145 @@ function getInitialData() {
   };
 }
 
-// Read database helper
-function readDB() {
+// Memory database cache for instant reads
+let globalDb: any = null;
+
+// Initialize database from Firestore, with local fallback and cloud migration
+async function initDatabase() {
+  console.log('[Database] Initializing POS database...');
   try {
-    if (!fs.existsSync(DB_PATH)) {
-      const initial = getInitialData();
-      fs.writeFileSync(DB_PATH, JSON.stringify(initial, null, 2), 'utf-8');
-      return initial;
+    const cloudDb = await loadFromFirestore();
+    if (cloudDb) {
+      globalDb = cloudDb;
+      // Sync local backup file
+      fs.writeFileSync(DB_PATH, JSON.stringify(globalDb, null, 2), 'utf-8');
+      console.log('[Database] Loaded successfully from Firestore and backed up locally.');
+    } else {
+      console.log('[Database] Firestore is empty. Performing initial migration/seeding...');
+      if (fs.existsSync(DB_PATH)) {
+        const data = fs.readFileSync(DB_PATH, 'utf-8');
+        globalDb = JSON.parse(data);
+      } else {
+        globalDb = getInitialData();
+        fs.writeFileSync(DB_PATH, JSON.stringify(globalDb, null, 2), 'utf-8');
+      }
+      // Populate Firestore with initial data in the background
+      syncFullDatabase(globalDb).catch(err => {
+        console.error('[Database] Failed to populate Firestore:', err);
+      });
     }
-    const data = fs.readFileSync(DB_PATH, 'utf-8');
-    return JSON.parse(data);
   } catch (error) {
-    console.error('Error reading database:', error);
-    return getInitialData();
+    console.error('[Database] Error initializing database from Firestore, using local fallback:', error);
+    if (fs.existsSync(DB_PATH)) {
+      try {
+        globalDb = JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
+      } catch (e) {
+        globalDb = getInitialData();
+      }
+    } else {
+      globalDb = getInitialData();
+    }
   }
 }
 
+// Read database helper (returns cached memory DB for maximum performance)
+function readDB() {
+  if (!globalDb) {
+    try {
+      if (fs.existsSync(DB_PATH)) {
+        const data = fs.readFileSync(DB_PATH, 'utf-8');
+        globalDb = JSON.parse(data);
+      } else {
+        globalDb = getInitialData();
+        fs.writeFileSync(DB_PATH, JSON.stringify(globalDb, null, 2), 'utf-8');
+      }
+    } catch (error) {
+      console.error('Error in synchronous readDB fallback:', error);
+      globalDb = getInitialData();
+    }
+  }
+  return globalDb;
+}
+
 // Write database helper
-function writeDB(data: any) {
+function writeDB(data: any, resource?: string) {
   try {
+    globalDb = data;
+    // Write local backup file synchronously
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+
+    // Asynchronously synchronize changes to Firestore
+    if (resource) {
+      const syncKey = resource;
+      const colData = resource === 'settings' ? data.settings : data[resource];
+      syncCollection(syncKey, colData).catch(err => {
+        console.error(`[Firestore] Failed to async sync collection '${syncKey}':`, err);
+      });
+    } else {
+      syncFullDatabase(data).catch(err => {
+        console.error('[Firestore] Failed to async sync full database:', err);
+      });
+    }
+
+    broadcastToAll({
+      type: 'db_update',
+      resource: resource || 'all',
+      timestamp: Date.now()
+    });
     return true;
   } catch (error) {
     console.error('Error writing database:', error);
     return false;
   }
+}
+
+// Define custom WebSocket interface
+interface CustomWebSocket extends WebSocket {
+  isAlive?: boolean;
+  userId?: string;
+  userNama?: string;
+  userRole?: string;
+  userEmail?: string;
+  currentView?: string;
+}
+
+const activeSockets = new Set<CustomWebSocket>();
+const chatHistory: any[] = [];
+
+function broadcastToAll(message: any) {
+  const payload = JSON.stringify(message);
+  for (const client of activeSockets) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(payload);
+    }
+  }
+}
+
+function broadcastPresence() {
+  const users: any[] = [];
+  const seenUsers = new Set<string>();
+  
+  for (const client of activeSockets) {
+    if (client.readyState === WebSocket.OPEN && client.userId) {
+      const key = `${client.userId}-${client.currentView || 'dashboard'}`;
+      if (!seenUsers.has(key)) {
+        seenUsers.add(key);
+        users.push({
+          ID_User: client.userId,
+          Nama: client.userNama || 'Staff',
+          Role: client.userRole || 'Kasir',
+          Email: client.userEmail || '',
+          currentView: client.currentView || 'POS',
+          activeAt: Date.now(),
+        });
+      }
+    }
+  }
+  
+  broadcastToAll({
+    type: 'presence',
+    users,
+  });
 }
 
 async function startServer() {
@@ -269,8 +386,8 @@ async function startServer() {
   // Static serving for local uploads folder
   app.use('/uploads', express.static(UPLOADS_DIR));
 
-  // Initialize DB immediately
-  readDB();
+  // Initialize DB immediately from Firestore
+  await initDatabase();
 
   // --- API ROUTES ---
 
@@ -1079,7 +1196,105 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = http.createServer(app);
+
+  // Initialize WebSocket server
+  const wss = new WebSocketServer({ server });
+
+  wss.on('connection', (socket: CustomWebSocket) => {
+    socket.isAlive = true;
+    activeSockets.add(socket);
+
+    // Set up ping response handler
+    socket.on('pong', () => {
+      socket.isAlive = true;
+    });
+
+    // Send existing chat history to the newly connected client
+    socket.send(JSON.stringify({
+      type: 'chat_history',
+      history: chatHistory,
+    }));
+
+    // Broadcast updated presence list
+    broadcastPresence();
+
+    socket.on('message', (messageData) => {
+      try {
+        const data = JSON.parse(messageData.toString());
+        
+        if (data.type === 'identify') {
+          socket.userId = data.user?.ID_User;
+          socket.userNama = data.user?.Nama;
+          socket.userRole = data.user?.Role;
+          socket.userEmail = data.user?.Email;
+          socket.currentView = data.currentView || 'POS';
+          broadcastPresence();
+        } 
+        else if (data.type === 'change_view') {
+          socket.currentView = data.currentView;
+          broadcastPresence();
+        } 
+        else if (data.type === 'chat') {
+          const chatMsg = {
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            message: data.message,
+            user: {
+              ID_User: socket.userId || data.user?.ID_User || 'unknown',
+              Nama: socket.userNama || data.user?.Nama || 'Staff',
+              Role: socket.userRole || data.user?.Role || 'Kasir',
+            },
+            timestamp: Date.now(),
+          };
+          chatHistory.push(chatMsg);
+          // Keep history to last 50 messages
+          if (chatHistory.length > 50) {
+            chatHistory.shift();
+          }
+          broadcastToAll({
+            type: 'chat',
+            message: chatMsg,
+          });
+        }
+        else if (data.type === 'ping') {
+          socket.send(JSON.stringify({ type: 'pong' }));
+        }
+      } catch (e) {
+        console.error('Error handling websocket message:', e);
+      }
+    });
+
+    socket.on('close', () => {
+      activeSockets.delete(socket);
+      broadcastPresence();
+    });
+
+    socket.on('error', (err) => {
+      console.error('Websocket socket error:', err);
+      activeSockets.delete(socket);
+      broadcastPresence();
+    });
+  });
+
+  // Keep-alive heartbeat to prune dead sockets
+  const interval = setInterval(() => {
+    for (const ws of activeSockets) {
+      if (ws.isAlive === false) {
+        activeSockets.delete(ws);
+        ws.terminate();
+        broadcastPresence();
+        continue;
+      }
+      ws.isAlive = false;
+      ws.ping();
+    }
+  }, 30000);
+
+  wss.on('close', () => {
+    clearInterval(interval);
+  });
+
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`[Kafe Maissy POS Backend] Running on http://localhost:${PORT}`);
   });
 }

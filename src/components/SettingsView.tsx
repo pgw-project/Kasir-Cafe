@@ -53,6 +53,14 @@ export default function SettingsView({ currentUser }: SettingsViewProps) {
 
   useEffect(() => {
     fetchSettings();
+
+    const handleUpdate = () => {
+      fetchSettings();
+    };
+    window.addEventListener('ws_db_update', handleUpdate);
+    return () => {
+      window.removeEventListener('ws_db_update', handleUpdate);
+    };
   }, []);
 
   const handleSaveSettings = async (e: React.FormEvent) => {

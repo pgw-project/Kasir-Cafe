@@ -45,6 +45,14 @@ export default function UserView({ currentUser }: UserViewProps) {
 
   useEffect(() => {
     fetchUsers();
+
+    const handleUpdate = () => {
+      fetchUsers();
+    };
+    window.addEventListener('ws_db_update', handleUpdate);
+    return () => {
+      window.removeEventListener('ws_db_update', handleUpdate);
+    };
   }, []);
 
   const handleCreateUser = async (e: React.FormEvent) => {

@@ -123,6 +123,14 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
 
   useEffect(() => {
     fetchMenus();
+
+    const handleUpdate = () => {
+      fetchMenus();
+    };
+    window.addEventListener('ws_db_update', handleUpdate);
+    return () => {
+      window.removeEventListener('ws_db_update', handleUpdate);
+    };
   }, []);
 
   const addToCart = (item: Menu) => {

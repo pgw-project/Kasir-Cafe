@@ -52,6 +52,14 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
 
   useEffect(() => {
     fetchMenus();
+
+    const handleUpdate = () => {
+      fetchMenus();
+    };
+    window.addEventListener('ws_db_update', handleUpdate);
+    return () => {
+      window.removeEventListener('ws_db_update', handleUpdate);
+    };
   }, []);
 
   // Handle Drag-and-Drop

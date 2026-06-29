@@ -164,6 +164,14 @@ export default function ReportView({ currentUser }: ReportViewProps) {
 
   useEffect(() => {
     fetchTransactions();
+
+    const handleUpdate = () => {
+      fetchTransactions();
+    };
+    window.addEventListener('ws_db_update', handleUpdate);
+    return () => {
+      window.removeEventListener('ws_db_update', handleUpdate);
+    };
   }, []);
 
   const openPrintWindow = (txId: string, paperSize: string = '80') => {
