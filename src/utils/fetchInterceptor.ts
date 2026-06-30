@@ -55,24 +55,19 @@ if (!window.__originalFetch) {
       try {
         const originalResponse = await window.__originalFetch!(input, init);
 
-        // If the server returns a 404 for an API route, it usually means 
-        // the app is deployed in a static hosting environment (like Vercel) 
-        // where the custom Express backend is not running at all.
+        // If the server returns a 404 for an API route, it means 
+        // the custom Express backend is not running, or we are in a static 
+        // environment. We fallback to the direct client-side Firestore Mode.
         if (originalResponse.status === 404) {
-          const bodyText = await originalResponse.clone().text();
+          console.warn('[Fetch Interceptor] Express server returned 404. Switching to direct client-side Firestore Mode!');
           
-          // Let's check if the body contains signs of hosting 404 (like Vercel NOT_FOUND)
-          if (bodyText.includes('NOT_FOUND') || bodyText.includes('Vercel') || bodyText.toLowerCase().includes('not found') || bodyText.includes('sin1::')) {
-            console.warn('[Fetch Interceptor] Express server not found (404 Vercel/Static). Switching to direct client-side Firestore Mode!');
-            
-            // Activate the fallback
-            window.__useClientFirebase = true;
-            localStorage.setItem('forceClientFirebase', 'true');
+          // Activate the fallback
+          window.__useClientFirebase = true;
+          localStorage.setItem('forceClientFirebase', 'true');
 
-            // Handle the request directly
-            const res = await clientFirebaseRouter.handleRequest(cleanPath, init?.method || 'GET', init?.body ? JSON.parse(init.body as string) : null);
-            return makeMockResponse(res.status, res.data);
-          }
+          // Handle the request directly
+          const res = await clientFirebaseRouter.handleRequest(cleanPath, init?.method || 'GET', init?.body ? JSON.parse(init.body as string) : null);
+          return makeMockResponse(res.status, res.data);
         }
 
         return originalResponse;
