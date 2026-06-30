@@ -1178,9 +1178,12 @@ async function startServer() {
 
   // --- DEV & SPA FALLBACK SETUP ---
 
-  // Detect if we are running in production mode (requires either production env or bundled file run)
-  const isProd = process.env.NODE_ENV === 'production' || 
-                 (typeof __filename !== 'undefined' && __filename.endsWith('server.cjs'));
+  // Detect if we are running in production mode.
+  // We use production mode ONLY if the bundled cjs file is running and dist/index.html exists,
+  // and we are not running the dev script (server.ts) directly.
+  const isDevScript = process.argv.some(arg => arg.includes('server.ts'));
+  const hasBuiltAssets = fs.existsSync(path.join(process.cwd(), 'dist', 'index.html'));
+  const isProd = !isDevScript && hasBuiltAssets;
 
   // Vite middleware for development
   if (!isProd) {
