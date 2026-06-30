@@ -13,14 +13,12 @@ try {
 }
 
 // Initialize Firebase Admin SDK
-if (getApps().length === 0) {
-  initializeApp({
-    projectId: firebaseConfig.projectId,
-  });
-}
+const adminApp = getApps().length === 0 ? initializeApp({
+  projectId: firebaseConfig.projectId,
+}) : getApps()[0];
 
 // Get reference to Firestore database instance
-export const firestore = getFirestore(firebaseConfig.firestoreDatabaseId);
+export const firestore = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId || undefined);
 
 /**
  * Loads all data from Firestore collections with a fast-failing timeout.
