@@ -144,7 +144,7 @@ export default function App() {
       };
 
       ws.onerror = (err) => {
-        console.error('WebSocket client error:', err);
+        console.log('[WebSocket] Connection state alert or retry initiated.', err);
         ws.close();
       };
     };

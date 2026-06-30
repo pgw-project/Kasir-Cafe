@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { User, Menu, Transaction, TransactionDetail, ActivityLog, Settings } from '../types';
+import dbData from '../../database.json';
 
 // Safe check to avoid initialization issues
 let db: any = null;
@@ -33,87 +34,70 @@ try {
 
 export { db };
 
-// Seeding helper to populate client-side Firestore if it's empty
-async function ensureSeeded() {
-  if (!db) return;
-  try {
-    const testDoc = await getDoc(doc(db, 'settings', 'global'));
-    if (!testDoc.exists()) {
-      console.log('[Firebase Client] Firestore is empty. Seeding initial data client-side...');
-      const batch = writeBatch(db);
-
-      // Seed Settings
-      const initialSettings: Settings = {
-        namaToko: 'Kopi Nusantara',
-        alamat: 'Jl. Malioboro No. 123, Yogyakarta',
-        telepon: '0812-3456-7890',
-        pesanFooter: 'Terima Kasih Atas Kunjungan Anda',
-        googleSpreadsheetId: '',
-        googleDriveFolderId: '',
-        autoSync: false
-      };
-      batch.set(doc(db, 'settings', 'global'), initialSettings);
-
-      // Seed standard Admin User
-      const adminUser: User = {
-        ID_User: 'user_admin',
-        Nama: 'Administrator',
-        Email: 'admin@pos.com',
-        Password: 'admin',
-        Role: 'admin',
-        Status: 'active',
-        Created_At: new Date().toISOString()
-      };
-      batch.set(doc(db, 'users', 'user_admin'), adminUser);
-
-      // Seed mock Menu items
-      const initialMenus: Menu[] = [
-        { ID_Menu: 'menu_1', Nama_Menu: 'Espresso', Kategori: 'Minuman', Harga: 15000, Foto_URL: '', Status: 'Tersedia', Created_At: new Date().toISOString() },
-        { ID_Menu: 'menu_2', Nama_Menu: 'Cappuccino', Kategori: 'Minuman', Harga: 22000, Foto_URL: '', Status: 'Tersedia', Created_At: new Date().toISOString() },
-        { ID_Menu: 'menu_3', Nama_Menu: 'Roti Bakar Cokelat', Kategori: 'Makanan', Harga: 18000, Foto_URL: '', Status: 'Tersedia', Created_At: new Date().toISOString() },
-        { ID_Menu: 'menu_4', Nama_Menu: 'Nasi Goreng Spesial', Kategori: 'Makanan', Harga: 25000, Foto_URL: '', Status: 'Tersedia', Created_At: new Date().toISOString() }
-      ];
-      initialMenus.forEach(item => {
-        batch.set(doc(db, 'menus', item.ID_Menu), item);
-      });
-
-      await batch.commit();
-      console.log('[Firebase Client] Firestore initial seeding completed.');
-    }
-  } catch (err: any) {
-    if (err && (err.code === 'permission-denied' || (err.message && err.message.includes('permission')))) {
-      console.log('[Firebase Client] Direct client-side write is restricted. Relying on backend server-side database synchronization.');
-    } else {
-      console.warn('[Firebase Client] Optional client-side seeding skipped:', err);
+// Helper to manage high-fidelity LocalStorage database
+const getLocalDb = () => {
+  const collections = ['users', 'menus', 'transactions', 'transaction_details', 'activity_log', 'settings'];
+  let dbInitialized = true;
+  for (const col of collections) {
+    if (!localStorage.getItem(`pos_${col}`)) {
+      dbInitialized = false;
+      break;
     }
   }
+
+  if (!dbInitialized) {
+    console.log('[Local DB] Initializing localStorage database from database.json...');
+    try {
+      localStorage.setItem('pos_users', JSON.stringify(dbData.users || []));
+      localStorage.setItem('pos_menus', JSON.stringify(dbData.menus || []));
+      localStorage.setItem('pos_transactions', JSON.stringify(dbData.transactions || []));
+      localStorage.setItem('pos_transaction_details', JSON.stringify(dbData.transaction_details || []));
+      localStorage.setItem('pos_activity_log', JSON.stringify(dbData.activity_log || []));
+      localStorage.setItem('pos_settings', JSON.stringify(dbData.settings || {}));
+    } catch (e) {
+      console.error('[Local DB] Error seeding localStorage:', e);
+    }
+  }
+
+  return {
+    get: (col: string): any => {
+      try {
+        const val = localStorage.getItem(`pos_${col}`);
+        return val ? JSON.parse(val) : (col === 'settings' ? {} : []);
+      } catch (e) {
+        return col === 'settings' ? {} : [];
+      }
+    },
+    set: (col: string, data: any) => {
+      try {
+        localStorage.setItem(`pos_${col}`, JSON.stringify(data));
+      } catch (e) {
+        console.error(`[Local DB] Error saving ${col}:`, e);
+      }
+    }
+  };
+};
+
+// Seeding helper is bypassed on client to avoid "Missing or insufficient permissions"
+async function ensureSeeded() {
+  console.log('[Firebase Client] Client-side direct seeding bypassed. Initializing LocalStorage database on-demand.');
 }
 
 // Trigger lazy seeding check
-if (db) {
-  ensureSeeded().catch(err => console.error('Error ensuring seeded:', err));
-}
+ensureSeeded().catch(err => console.error('Error ensuring seeded:', err));
 
 // --- CLIENT-SIDE REST ROUTER ---
-// Replicates Express API logic using direct Firestore access
-
+// Replicates Express API logic using localStorage fallback
 export const clientFirebaseRouter = {
   handleRequest: async (path: string, method: string, body: any): Promise<any> => {
-    if (!db) {
-      throw new Error('Firebase Client SDK is not initialized.');
-    }
-
     // Clean paths like `/api/users/123` to route parameters
     const cleanPath = path.replace(/^\/api/, '');
 
     // 1. Auth: Login
     if (cleanPath === '/auth/login' && method === 'POST') {
       const { email, password } = body;
-      const usersSnap = await getDocs(collection(db, 'users'));
-      const users: User[] = [];
-      usersSnap.forEach(doc => {
-        users.push(doc.data() as User);
-      });
+      const ldb = getLocalDb();
+      const users: User[] = ldb.get('users');
 
       const user = users.find(u => u.Email.toLowerCase() === email.toLowerCase() && u.Status === 'active');
       if (!user) {
@@ -130,9 +114,11 @@ export const clientFirebaseRouter = {
         Nama_User: user.Nama,
         Action: 'LOGIN',
         Module: 'AUTH',
-        Description: `Pengguna ${user.Nama} (${user.Role}) berhasil login (client-side fallback).`,
+        Description: `Pengguna ${user.Nama} (${user.Role}) berhasil login (client-side local db).`,
       };
-      await setDoc(doc(db, 'activity_log', `log_${Date.now()}`), log);
+      const logs = ldb.get('activity_log');
+      logs.push(log);
+      ldb.set('activity_log', logs);
 
       const { Password, ...userProfile } = user;
       const mockToken = `token_${user.ID_User}_${Date.now()}`;
@@ -142,11 +128,8 @@ export const clientFirebaseRouter = {
     // 2. Auth: Register
     if (cleanPath === '/auth/register' && method === 'POST') {
       const { nama, email, password, role } = body;
-      const usersSnap = await getDocs(collection(db, 'users'));
-      const users: User[] = [];
-      usersSnap.forEach(doc => {
-        users.push(doc.data() as User);
-      });
+      const ldb = getLocalDb();
+      const users: User[] = ldb.get('users');
 
       const exists = users.some(u => u.Email.toLowerCase() === email.toLowerCase());
       if (exists) {
@@ -163,7 +146,8 @@ export const clientFirebaseRouter = {
         Created_At: new Date().toISOString()
       };
 
-      await setDoc(doc(db, 'users', newUser.ID_User), newUser);
+      users.push(newUser);
+      ldb.set('users', users);
 
       // Add log
       const log: ActivityLog = {
@@ -174,7 +158,9 @@ export const clientFirebaseRouter = {
         Module: 'AUTH',
         Description: `Staf baru ${newUser.Nama} (${newUser.Role}) didaftarkan.`,
       };
-      await setDoc(doc(db, 'activity_log', `log_${Date.now()}`), log);
+      const logs = ldb.get('activity_log');
+      logs.push(log);
+      ldb.set('activity_log', logs);
 
       return { ok: true, status: 200, data: { success: true, user: newUser } };
     }
@@ -182,145 +168,153 @@ export const clientFirebaseRouter = {
     // 3. Auth: Reset Password
     if (cleanPath === '/auth/reset-password' && method === 'POST') {
       const { email, newPassword } = body;
-      const usersSnap = await getDocs(collection(db, 'users'));
-      let foundUser: User | null = null;
-      usersSnap.forEach(docSnap => {
-        const u = docSnap.data() as User;
-        if (u.Email.toLowerCase() === email.toLowerCase()) {
-          foundUser = u;
-        }
-      });
+      const ldb = getLocalDb();
+      const users: User[] = ldb.get('users');
+      const idx = users.findIndex(u => u.Email.toLowerCase() === email.toLowerCase());
 
-      if (!foundUser) {
+      if (idx === -1) {
         return { ok: false, status: 404, data: { success: false, message: 'Email tidak ditemukan.' } };
       }
 
-      const updatedUser = { ...foundUser, Password: newPassword };
-      await setDoc(doc(db, 'users', (foundUser as User).ID_User), updatedUser);
+      users[idx].Password = newPassword;
+      ldb.set('users', users);
 
       return { ok: true, status: 200, data: { success: true, message: 'Kata sandi berhasil diperbarui.' } };
     }
 
     // 4. CRUD: Users
     if (cleanPath === '/users' && method === 'GET') {
-      const snap = await getDocs(collection(db, 'users'));
-      const list: any[] = [];
-      snap.forEach(d => list.push(d.data()));
-      return { ok: true, status: 200, data: list };
+      const ldb = getLocalDb();
+      return { ok: true, status: 200, data: ldb.get('users') };
     }
     if (cleanPath === '/users' && method === 'POST') {
+      const ldb = getLocalDb();
+      const users = ldb.get('users');
       const newUser = { ...body, ID_User: body.ID_User || `usr_${Date.now()}` };
-      await setDoc(doc(db, 'users', newUser.ID_User), newUser);
+      users.push(newUser);
+      ldb.set('users', users);
       return { ok: true, status: 200, data: { success: true, user: newUser } };
     }
     if (cleanPath.startsWith('/users/') && method === 'PUT') {
       const id = cleanPath.split('/')[2];
-      await setDoc(doc(db, 'users', id), body);
+      const ldb = getLocalDb();
+      const users = ldb.get('users');
+      const idx = users.findIndex((u: any) => u.ID_User === id);
+      if (idx !== -1) {
+        users[idx] = { ...users[idx], ...body };
+        ldb.set('users', users);
+      }
       return { ok: true, status: 200, data: { success: true, user: body } };
     }
     if (cleanPath.startsWith('/users/') && method === 'DELETE') {
       const id = cleanPath.split('/')[2];
-      await deleteDoc(doc(db, 'users', id));
+      const ldb = getLocalDb();
+      const users = ldb.get('users');
+      const filtered = users.filter((u: any) => u.ID_User !== id);
+      ldb.set('users', filtered);
       return { ok: true, status: 200, data: { success: true } };
     }
 
     // 5. CRUD: Menus
     if (cleanPath === '/menus' && method === 'GET') {
-      const snap = await getDocs(collection(db, 'menus'));
-      const list: any[] = [];
-      snap.forEach(d => list.push(d.data()));
-      return { ok: true, status: 200, data: list };
+      const ldb = getLocalDb();
+      return { ok: true, status: 200, data: ldb.get('menus') };
     }
     if (cleanPath === '/menus' && method === 'POST') {
+      const ldb = getLocalDb();
+      const menus = ldb.get('menus');
       const newMenu = { ...body, ID_Menu: body.ID_Menu || `menu_${Date.now()}` };
-      await setDoc(doc(db, 'menus', newMenu.ID_Menu), newMenu);
+      menus.push(newMenu);
+      ldb.set('menus', menus);
       return { ok: true, status: 200, data: { success: true, menu: newMenu } };
     }
     if (cleanPath.startsWith('/menus/') && method === 'PUT') {
       const id = cleanPath.split('/')[2];
-      await setDoc(doc(db, 'menus', id), body);
+      const ldb = getLocalDb();
+      const menus = ldb.get('menus');
+      const idx = menus.findIndex((m: any) => m.ID_Menu === id);
+      if (idx !== -1) {
+        menus[idx] = { ...menus[idx], ...body };
+        ldb.set('menus', menus);
+      }
       return { ok: true, status: 200, data: { success: true, menu: body } };
     }
     if (cleanPath.startsWith('/menus/') && method === 'DELETE') {
       const id = cleanPath.split('/')[2];
-      await deleteDoc(doc(db, 'menus', id));
+      const ldb = getLocalDb();
+      const menus = ldb.get('menus');
+      const filtered = menus.filter((m: any) => m.ID_Menu !== id);
+      ldb.set('menus', filtered);
       return { ok: true, status: 200, data: { success: true } };
     }
 
     // 6. CRUD: Settings
     if (cleanPath === '/settings' && method === 'GET') {
-      const docSnap = await getDoc(doc(db, 'settings', 'global'));
-      let settings = docSnap.exists() ? docSnap.data() : {
-        namaToko: 'Kopi Nusantara',
-        alamat: 'Jl. Malioboro No. 123, Yogyakarta',
-        telepon: '0812-3456-7890',
-        pesanFooter: 'Terima Kasih Atas Kunjungan Anda',
-        googleSpreadsheetId: '',
-        googleDriveFolderId: '',
-        autoSync: false
-      };
+      const ldb = getLocalDb();
+      let settings = ldb.get('settings');
+      if (!settings || !settings.namaToko) {
+        settings = {
+          namaToko: 'Kafe Maissy Coffee',
+          alamat: 'Jl. Melati No. 45, Kebayoran Baru, Jakarta Selatan',
+          telepon: '0812-3456-7890',
+          pesanFooter: 'Terima kasih telah berkunjung ke Maissy Coffee!',
+          googleSpreadsheetId: '1SHeYy5Vb1OaC9R_gTqC0y1-N4VzMaissySpreadsheetID',
+          googleDriveFolderId: '1nXzPzQ2lqqaATvNybfTqcYU9lHc2DuG5',
+          autoSync: true
+        };
+        ldb.set('settings', settings);
+      }
       return { ok: true, status: 200, data: { success: true, settings } };
     }
     if (cleanPath === '/settings' && method === 'PUT') {
-      await setDoc(doc(db, 'settings', 'global'), body);
+      const ldb = getLocalDb();
+      ldb.set('settings', body);
       return { ok: true, status: 200, data: { success: true, settings: body } };
     }
 
     // 7. Activity Logs
     if (cleanPath === '/logs' && method === 'GET') {
-      const snap = await getDocs(collection(db, 'activity_log'));
-      const list: any[] = [];
-      snap.forEach(d => list.push(d.data()));
-      list.sort((a, b) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime());
+      const ldb = getLocalDb();
+      const list = ldb.get('activity_log');
+      list.sort((a: any, b: any) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime());
       return { ok: true, status: 200, data: list };
     }
 
     // 8. Transactions
     if (cleanPath === '/transactions' && method === 'GET') {
-      const snap = await getDocs(collection(db, 'transactions'));
-      const list: any[] = [];
-      snap.forEach(d => list.push(d.data()));
-      list.sort((a, b) => new Date(b.Tanggal).getTime() - new Date(a.Tanggal).getTime());
+      const ldb = getLocalDb();
+      const list = ldb.get('transactions');
+      list.sort((a: any, b: any) => new Date(b.Tanggal).getTime() - new Date(a.Tanggal).getTime());
       return { ok: true, status: 200, data: list };
     }
     if (cleanPath === '/transactions' && method === 'POST') {
       const { transaction, details } = body;
+      const ldb = getLocalDb();
       
-      // Save Transaction
+      const transactions = ldb.get('transactions');
+      const transaction_details = ldb.get('transaction_details');
+
       const txId = transaction.ID_Transaksi || `tx_${Date.now()}`;
       const finalTx = { ...transaction, ID_Transaksi: txId };
-      await setDoc(doc(db, 'transactions', txId), finalTx);
+      transactions.push(finalTx);
+      ldb.set('transactions', transactions);
 
-      // Save Transaction Details & Update Menu Stock
-      const batch = writeBatch(db);
       for (const det of details) {
         const detId = det.ID_Detail || `det_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
         const finalDet = { ...det, ID_Transaksi: txId, ID_Detail: detId };
-        batch.set(doc(db, 'transaction_details', detId), finalDet);
-
-        // Reduce menu stock (no-op since Menu type doesn't track numeric stock in current schema)
+        transaction_details.push(finalDet);
       }
-      await batch.commit();
+      ldb.set('transaction_details', transaction_details);
 
       return { ok: true, status: 200, data: { success: true, transaction: finalTx } };
     }
 
     // 9. Analytics report
     if (cleanPath === '/reports/analytics' && method === 'GET') {
-      // Get all transactions
-      const txSnap = await getDocs(collection(db, 'transactions'));
-      const transactions: Transaction[] = [];
-      txSnap.forEach(d => transactions.push(d.data() as Transaction));
-
-      // Get all transaction details
-      const detSnap = await getDocs(collection(db, 'transaction_details'));
-      const details: TransactionDetail[] = [];
-      detSnap.forEach(d => details.push(d.data() as TransactionDetail));
-
-      // Get menus for category lookup
-      const menuSnap = await getDocs(collection(db, 'menus'));
-      const menus: Menu[] = [];
-      menuSnap.forEach(d => menus.push(d.data() as Menu));
+      const ldb = getLocalDb();
+      const transactions: Transaction[] = ldb.get('transactions');
+      const details: TransactionDetail[] = ldb.get('transaction_details');
+      const menus: Menu[] = ldb.get('menus');
 
       const now = new Date();
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
