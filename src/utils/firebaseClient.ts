@@ -528,6 +528,7 @@ export const clientFirebaseRouter = {
       settings.alamat = targetCafe.alamat;
       settings.telepon = targetCafe.telepon;
       settings.pesanFooter = targetCafe.pesanFooter;
+      settings.logoUrl = targetCafe.logoUrl || '';
 
       ldb.set('settings', settings);
 

@@ -71,7 +71,7 @@ export default function ReportView({ currentUser }: ReportViewProps) {
 
   const handlePrintBluetooth = async (paperSize: '58' | '80') => {
     try {
-      const settingsRes = await fetch(`/api/settings?userId=${currentUser.ID_User}`);
+      const settingsRes = await fetch(`/api/settings?userId=${currentUser?.ID_User || ''}`);
       const settings = await settingsRes.json();
       
       const tx = transactions.find((t: any) => t.ID_Transaksi === printTxId);
@@ -104,21 +104,22 @@ export default function ReportView({ currentUser }: ReportViewProps) {
   };
 
   const getTransactionItemCounts = (txId: string) => {
-    const txDetails = details.filter((d) => d.ID_Transaksi === txId);
+    const txDetails = (details || []).filter((d) => d && d.ID_Transaksi === txId);
     let makanan = 0;
     let minuman = 0;
     
     txDetails.forEach((d) => {
-      const menu = menus.find((m) => m.ID_Menu === d.ID_Menu);
+      if (!d) return;
+      const menu = (menus || []).find((m) => m && m.ID_Menu === d.ID_Menu);
       if (menu) {
-        const lowerCat = menu.Kategori.toLowerCase();
+        const lowerCat = (menu.Kategori || '').toLowerCase();
         if (lowerCat === 'makanan' || lowerCat === 'snacks' || lowerCat === 'desserts') {
-          makanan += d.Qty;
+          makanan += d.Qty || 0;
         } else {
-          minuman += d.Qty;
+          minuman += d.Qty || 0;
         }
       } else {
-        const nameLower = d.Nama_Menu.toLowerCase();
+        const nameLower = (d.Nama_Menu || '').toLowerCase();
         if (
           nameLower.includes('croissant') || 
           nameLower.includes('fries') || 
@@ -128,9 +129,9 @@ export default function ReportView({ currentUser }: ReportViewProps) {
           nameLower.includes('mie') ||
           nameLower.includes('burger')
         ) {
-          makanan += d.Qty;
+          makanan += d.Qty || 0;
         } else {
-          minuman += d.Qty;
+          minuman += d.Qty || 0;
         }
       }
     });
@@ -146,17 +147,20 @@ export default function ReportView({ currentUser }: ReportViewProps) {
     try {
       setLoading(true);
       const [transRes, menusRes] = await Promise.all([
-        fetch(`/api/transactions?userId=${currentUser?.ID_User}`),
+        fetch(`/api/transactions?userId=${currentUser?.ID_User || ''}`),
         fetch('/api/menus')
       ]);
       const transData = await transRes.json();
       const menusData = await menusRes.json();
       
-      setTransactions(transData.transactions);
-      setDetails(transData.details);
-      setMenus(menusData);
+      setTransactions(Array.isArray(transData?.transactions) ? transData.transactions : []);
+      setDetails(Array.isArray(transData?.details) ? transData.details : []);
+      setMenus(Array.isArray(menusData) ? menusData : []);
     } catch (err) {
       console.error('Error fetching reports:', err);
+      setTransactions([]);
+      setDetails([]);
+      setMenus([]);
     } finally {
       setLoading(false);
     }
@@ -185,22 +189,30 @@ export default function ReportView({ currentUser }: ReportViewProps) {
   };
 
   // Filter Logic
-  const filteredTransactions = transactions.filter((tx) => {
+  const filteredTransactions = (transactions || []).filter((tx) => {
+    if (!tx) return false;
+
     // 1. Role-based filtration (Cashier only sees their own sales)
-    if (currentUser.Role === 'kasir' && tx.Kasir !== currentUser.Nama) {
+    if (currentUser?.Role === 'kasir' && tx.Kasir !== currentUser?.Nama) {
       return false;
     }
 
     // 2. Search query filtration
+    const txIdStr = tx.ID_Transaksi || '';
+    const custStr = tx.Nama_Pelanggan || '';
+    const kasirStr = tx.Kasir || '';
+
     const matchesSearch = 
-      tx.ID_Transaksi.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      tx.Nama_Pelanggan.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tx.Kasir.toLowerCase().includes(searchQuery.toLowerCase());
+      txIdStr.toLowerCase().includes((searchQuery || '').toLowerCase()) || 
+      custStr.toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+      kasirStr.toLowerCase().includes((searchQuery || '').toLowerCase());
     
     if (!matchesSearch) return false;
 
     // 3. Date Presets & Range filter
+    if (!tx.Tanggal) return false;
     const txDate = new Date(tx.Tanggal);
+    if (isNaN(txDate.getTime())) return false;
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
@@ -261,19 +273,19 @@ export default function ReportView({ currentUser }: ReportViewProps) {
 
     // Format data into rows suitable for the sheet
     const dataRows = filteredTransactions.map((tx) => {
-      const dateFormatted = new Date(tx.Tanggal).toLocaleString('id-ID');
+      const dateFormatted = tx.Tanggal ? new Date(tx.Tanggal).toLocaleString('id-ID') : '';
       const counts = getTransactionItemCounts(tx.ID_Transaksi);
       return {
-        'ID Transaksi': tx.ID_Transaksi,
+        'ID Transaksi': tx.ID_Transaksi || '',
         'Tanggal': dateFormatted,
-        'Nama Pelanggan': tx.Nama_Pelanggan,
-        'Kasir': tx.Kasir,
+        'Nama Pelanggan': tx.Nama_Pelanggan || '',
+        'Kasir': tx.Kasir || '',
         'Total Makanan/Minuman Terjual': counts.total,
         'Makanan Terjual': counts.makanan,
         'Minuman Terjual': counts.minuman,
-        'Total Harga (IDR)': tx.Total_Harga,
+        'Total Harga (IDR)': tx.Total_Harga || 0,
         'Metode Pembayaran': tx.Metode_Bayar || 'TUNAI',
-        'Status': tx.Status
+        'Status': tx.Status || ''
       };
     });
 
@@ -308,9 +320,9 @@ export default function ReportView({ currentUser }: ReportViewProps) {
             Laporan Penjualan Kafe
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            {currentUser.Role === 'admin' 
+            {currentUser?.Role === 'admin' 
               ? 'Laporan agregat rekapitulasi penjualan seluruh kasir untuk di-sinkronisasikan ke Google Spreadsheet.'
-              : `Laporan rekap penjualan shift personal atas nama: ${currentUser.Nama}`}
+              : `Laporan rekap penjualan shift personal atas nama: ${currentUser?.Nama || '-'}`}
           </p>
         </div>
 

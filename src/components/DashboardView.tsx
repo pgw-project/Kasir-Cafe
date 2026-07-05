@@ -21,7 +21,8 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
   useEffect(() => {
     const fetchCafeName = async () => {
       try {
-        const res = await fetch(`/api/settings?userId=${currentUser?.ID_User}`);
+        if (!currentUser?.ID_User) return;
+        const res = await fetch(`/api/settings?userId=${currentUser.ID_User}`);
         if (res.ok) {
           const data = await res.json();
           if (data && data.namaToko) {
@@ -38,7 +39,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
   const fetchAnalytics = async () => {
     try {
       setRefreshing(true);
-      const res = await fetch(`/api/reports/analytics?userId=${currentUser?.ID_User}`);
+      const res = await fetch(`/api/reports/analytics?userId=${currentUser?.ID_User || ''}`);
       const json = await res.json();
       setData(json);
     } catch (err) {
@@ -97,10 +98,10 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 id="dashboard-welcome-heading" className="text-3xl font-bold tracking-tight text-zinc-950 dark:text-zinc-50 flex items-center gap-2">
-            Selamat Datang, {currentUser.Nama} <Sparkles className="h-6 w-6 text-amber-500 animate-pulse" />
+            Selamat Datang, {currentUser?.Nama || 'Kasir'} <Sparkles className="h-6 w-6 text-amber-500 animate-pulse" />
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-            {currentUser.Role === 'admin' 
+            {currentUser?.Role === 'admin' 
               ? `Berikut ringkasan performa dan metrik operasional ${cafeName} saat ini.`
               : 'Siap melayani pelanggan hari ini? Gunakan panel POS untuk mencatat pesanan.'}
           </p>
@@ -116,7 +117,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
             <span className="text-xs font-semibold">Segarkan Data</span>
           </button>
 
-          {currentUser.Role === 'kasir' && (
+          {currentUser?.Role === 'kasir' && (
             <button
               id="navigate-pos-btn"
               onClick={() => onNavigate('pos')}
@@ -216,27 +217,27 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 tracking-wider uppercase">
-              {currentUser.Role === 'admin' ? 'Total Penjualan' : 'Profil Kasir Aktif'}
+              {currentUser?.Role === 'admin' ? 'Total Penjualan' : 'Profil Kasir Aktif'}
             </span>
             <div className="p-3 bg-pink-500/10 rounded-xl text-pink-600 dark:text-pink-500">
-              {currentUser.Role === 'admin' ? <Layers className="h-5 w-5" /> : <UserCheck className="h-5 w-5" />}
+              {currentUser?.Role === 'admin' ? <Layers className="h-5 w-5" /> : <UserCheck className="h-5 w-5" />}
             </div>
           </div>
           <div className="mt-4">
             <h3 className="text-2xl font-bold text-zinc-950 dark:text-zinc-50">
-              {currentUser.Role === 'admin' 
+              {currentUser?.Role === 'admin' 
                 ? `Rp ${summary.totalSalesEver.toLocaleString('id-ID')}`
-                : currentUser.Nama}
+                : (currentUser?.Nama || 'Kasir')}
             </h3>
             <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">
-              {currentUser.Role === 'admin' ? 'Omzet kumulatif di database' : 'Hak Akses: KASIR MAISSY'}
+              {currentUser?.Role === 'admin' ? 'Omzet kumulatif di database' : 'Hak Akses: KASIR MAISSY'}
             </p>
           </div>
         </motion.div>
       </div>
 
       {/* Main Charts & Visualizations Grid */}
-      {currentUser.Role === 'admin' ? (
+      {currentUser?.Role === 'admin' ? (
         <div id="analytics-visuals" className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Chart 1: Line Chart - Tren Penjualan Harian */}
           <div id="chart-daily-sales" className="lg:col-span-2 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#1a1613]">
@@ -432,7 +433,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
       )}
 
       {/* Grid: Top 5 Best Sellers (Admin Only) */}
-      {currentUser.Role === 'admin' && (
+      {currentUser?.Role === 'admin' && (
         <div id="top-sellers-section" className="p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#1a1613]">
           <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-base">Top 5 Produk Terlaris</h3>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">Produk dengan kuantitas penjualan tertinggi saat ini</p>

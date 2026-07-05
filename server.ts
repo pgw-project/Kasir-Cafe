@@ -886,6 +886,21 @@ async function startServer() {
         autoSync: autoSync !== undefined ? autoSync : db.settings.autoSync,
         logoUrl: logoUrl !== undefined ? logoUrl : db.settings.logoUrl,
       };
+
+      // Also update the active cafe inside db.settings.cafes so that its settings are saved!
+      if (db.settings.activeCafeId && db.settings.cafes) {
+        const cafeIndex = db.settings.cafes.findIndex((c: any) => c.id === db.settings.activeCafeId);
+        if (cafeIndex !== -1) {
+          db.settings.cafes[cafeIndex] = {
+            ...db.settings.cafes[cafeIndex],
+            namaToko: namaToko || db.settings.cafes[cafeIndex].namaToko,
+            alamat: alamat || db.settings.cafes[cafeIndex].alamat,
+            telepon: telepon || db.settings.cafes[cafeIndex].telepon,
+            pesanFooter: pesanFooter || db.settings.cafes[cafeIndex].pesanFooter,
+            logoUrl: logoUrl !== undefined ? logoUrl : db.settings.cafes[cafeIndex].logoUrl,
+          };
+        }
+      }
     }
 
     db.activity_log.unshift({
@@ -1019,6 +1034,7 @@ async function startServer() {
     db.settings.alamat = targetCafe.alamat;
     db.settings.telepon = targetCafe.telepon;
     db.settings.pesanFooter = targetCafe.pesanFooter;
+    db.settings.logoUrl = targetCafe.logoUrl || '';
 
     db.activity_log.unshift({
       Timestamp: new Date().toISOString(),
