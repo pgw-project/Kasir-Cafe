@@ -1,0 +1,1574 @@
+{
+  "users": [
+    {
+      "ID_User": "USR-000",
+      "Nama": "Asrianto (Creator)",
+      "Email": "asriantofistek015@gmail.com",
+      "Role": "creator",
+      "Status": "active",
+      "Password": "admin123",
+      "Created_At": "2026-07-05T00:17:30.775Z"
+    },
+    {
+      "ID_User": "USR-001",
+      "Nama": "Maissy Owner",
+      "Email": "admin@maissy.com",
+      "Role": "admin",
+      "Status": "active",
+      "Password": "admin123",
+      "Created_At": "2026-06-04T23:40:50.066Z"
+    },
+    {
+      "ID_User": "USR-002",
+      "Nama": "Rian Kasir",
+      "Email": "kasir@maissy.com",
+      "Role": "kasir",
+      "Status": "active",
+      "Password": "kasir123",
+      "Created_At": "2026-06-19T23:40:50.066Z"
+    },
+    {
+      "ID_User": "USR-004",
+      "Nama": "esa",
+      "Email": "esa@zonacafe.com",
+      "Role": "kasir",
+      "Status": "active",
+      "Password": "123456",
+      "Created_At": "2026-07-05T00:23:37.353Z"
+    },
+    {
+      "ID_User": "USR-005",
+      "Nama": "Zona Cafe Owner",
+      "Email": "admin@zonacafe.com",
+      "Role": "admin",
+      "Status": "active",
+      "Password": "admin123",
+      "Created_At": "2026-07-05T00:30:00.000Z",
+      "cafeId": "1234"
+    }
+  ],
+  "menus": [
+    {
+      "ID_Menu": "MN-001",
+      "Kategori": "Minuman",
+      "Nama_Menu": "Es Kopi Susu Maissy",
+      "Harga": 18000,
+      "Foto_URL": "https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=200",
+      "Status": "Tersedia",
+      "Created_At": "2026-06-19T23:40:50.066Z"
+    },
+    {
+      "ID_Menu": "MN-002",
+      "Kategori": "Minuman",
+      "Nama_Menu": "Espresso Double",
+      "Harga": 15000,
+      "Foto_URL": "https://images.unsplash.com/photo-151097252790b-af4f42d91015?auto=format&fit=crop&q=80&w=200",
+      "Status": "Tersedia",
+      "Created_At": "2026-06-19T23:40:50.066Z"
+    },
+    {
+      "ID_Menu": "MN-003",
+      "Kategori": "Minuman",
+      "Nama_Menu": "Hot Cappuccino",
+      "Harga": 22000,
+      "Foto_URL": "https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&q=80&w=200",
+      "Status": "Tersedia",
+      "Created_At": "2026-06-19T23:40:50.066Z"
+    },
+    {
+      "ID_Menu": "MN-004",
+      "Kategori": "Minuman",
+      "Nama_Menu": "Ice Caramel Macchiato",
+      "Harga": 25000,
+      "Foto_URL": "https://images.unsplash.com/photo-1595434061149-86575bc89529?auto=format&fit=crop&q=80&w=200",
+      "Status": "Tersedia",
+      "Created_At": "2026-06-19T23:40:50.066Z"
+    },
+    {
+      "ID_Menu": "MN-005",
+      "Kategori": "Minuman",
+      "Nama_Menu": "Ice Matcha Latte",
+      "Harga": 22000,
+      "Foto_URL": "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&q=80&w=200",
+      "Status": "Tersedia",
+      "Created_At": "2026-06-19T23:40:50.066Z"
+    },
+    {
+      "ID_Menu": "MN-006",
+      "Kategori": "Minuman",
+      "Nama_Menu": "Chocolate Signature",
+      "Harga": 20000,
+      "Foto_URL": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&q=80&w=200",
+      "Status": "Tersedia",
+      "Created_At": "2026-06-19T23:40:50.066Z"
+    },
+    {
+      "ID_Menu": "MN-007",
+      "Kategori": "Minuman",
+      "Nama_Menu": "Ice Lychee Tea",
+      "Harga": 15000,
+      "Foto_URL": "https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&q=80&w=200",
+      "Status": "Tersedia",
+      "Created_At": "2026-06-19T23:40:50.066Z"
+    },
+    {
+      "ID_Menu": "MN-008",
+      "Kategori": "Makanan",
+      "Nama_Menu": "Butter Croissant",
+      "Harga": 18000,
+      "Foto_URL": "https://images.unsplash.com/photo-1555507036-ab1f4038808a?auto=format&fit=crop&q=80&w=200",
+      "Status": "Tersedia",
+      "Created_At": "2026-06-19T23:40:50.066Z"
+    },
+    {
+      "ID_Menu": "MN-009",
+      "Kategori": "Makanan",
+      "Nama_Menu": "French Fries Extra",
+      "Harga": 15000,
+      "Foto_URL": "https://images.unsplash.com/photo-1573080496219-bb080dd4f877?auto=format&fit=crop&q=80&w=200",
+      "Status": "Tersedia",
+      "Created_At": "2026-06-19T23:40:50.066Z"
+    },
+    {
+      "ID_Menu": "MN-010",
+      "Kategori": "Makanan",
+      "Nama_Menu": "Choco Lava Cake",
+      "Harga": 20000,
+      "Foto_URL": "https://images.unsplash.com/photo-1606313564200-e75d5e30476c?auto=format&fit=crop&q=80&w=200",
+      "Status": "Tersedia",
+      "Created_At": "2026-06-19T23:40:50.066Z"
+    }
+  ],
+  "transactions": [
+    {
+      "ID_Transaksi": "TRX-00044",
+      "Tanggal": "2026-07-05T00:22:05.369Z",
+      "Nama_Pelanggan": "diana",
+      "Total_Item": 1,
+      "Total_Harga": 18000,
+      "Bayar": 18000,
+      "Kembali": 0,
+      "Kasir": "Asrianto (Creator)",
+      "PDF_URL": "/api/receipt/TRX-00044/print",
+      "Status": "Paid",
+      "Metode_Bayar": "TUNAI"
+    },
+    {
+      "ID_Transaksi": "TRX-00043",
+      "Tanggal": "2026-07-04T23:50:26.494Z",
+      "Nama_Pelanggan": "guy",
+      "Total_Item": 1,
+      "Total_Harga": 20000,
+      "Bayar": 20000,
+      "Kembali": 0,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00043/print",
+      "Status": "Paid",
+      "Metode_Bayar": "TUNAI"
+    },
+    {
+      "ID_Transaksi": "TRX-00042",
+      "Tanggal": "2026-07-04T23:49:19.322Z",
+      "Nama_Pelanggan": "K",
+      "Total_Item": 1,
+      "Total_Harga": 18000,
+      "Bayar": 18000,
+      "Kembali": 0,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00042/print",
+      "Status": "Paid",
+      "Metode_Bayar": "TUNAI"
+    },
+    {
+      "ID_Transaksi": "TRX-00041",
+      "Tanggal": "2026-07-04T23:45:48.229Z",
+      "Nama_Pelanggan": "K",
+      "Total_Item": 2,
+      "Total_Harga": 36000,
+      "Bayar": 206000,
+      "Kembali": 170000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00041/print",
+      "Status": "Paid",
+      "Metode_Bayar": "TUNAI"
+    },
+    {
+      "ID_Transaksi": "TRX-00001",
+      "Tanggal": "2026-06-27T23:40:50.066Z",
+      "Nama_Pelanggan": "Ferry",
+      "Total_Item": 4,
+      "Total_Harga": 66000,
+      "Bayar": 70000,
+      "Kembali": 4000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00001/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00002",
+      "Tanggal": "2026-06-27T23:40:50.066Z",
+      "Nama_Pelanggan": "Andi",
+      "Total_Item": 3,
+      "Total_Harga": 68000,
+      "Bayar": 70000,
+      "Kembali": 2000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00002/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00003",
+      "Tanggal": "2026-06-27T23:40:50.066Z",
+      "Nama_Pelanggan": "Hana",
+      "Total_Item": 2,
+      "Total_Harga": 44000,
+      "Bayar": 50000,
+      "Kembali": 6000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00003/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00004",
+      "Tanggal": "2026-06-28T23:40:50.066Z",
+      "Nama_Pelanggan": "Andi",
+      "Total_Item": 2,
+      "Total_Harga": 30000,
+      "Bayar": 30000,
+      "Kembali": 0,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00004/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00005",
+      "Tanggal": "2026-06-28T23:40:50.066Z",
+      "Nama_Pelanggan": "Chandra",
+      "Total_Item": 4,
+      "Total_Harga": 70000,
+      "Bayar": 70000,
+      "Kembali": 0,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00005/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00006",
+      "Tanggal": "2026-06-28T23:40:50.066Z",
+      "Nama_Pelanggan": "Andi",
+      "Total_Item": 4,
+      "Total_Harga": 72000,
+      "Bayar": 80000,
+      "Kembali": 8000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00006/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00007",
+      "Tanggal": "2026-06-28T23:40:50.066Z",
+      "Nama_Pelanggan": "Dewi",
+      "Total_Item": 1,
+      "Total_Harga": 22000,
+      "Bayar": 30000,
+      "Kembali": 8000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00007/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00008",
+      "Tanggal": "2026-06-28T23:40:50.066Z",
+      "Nama_Pelanggan": "Budi",
+      "Total_Item": 3,
+      "Total_Harga": 58000,
+      "Bayar": 60000,
+      "Kembali": 2000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00008/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00009",
+      "Tanggal": "2026-06-28T23:40:50.066Z",
+      "Nama_Pelanggan": "Chandra",
+      "Total_Item": 6,
+      "Total_Harga": 120000,
+      "Bayar": 120000,
+      "Kembali": 0,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00009/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00010",
+      "Tanggal": "2026-06-28T23:40:50.066Z",
+      "Nama_Pelanggan": "Chandra",
+      "Total_Item": 2,
+      "Total_Harga": 35000,
+      "Bayar": 40000,
+      "Kembali": 5000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00010/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00011",
+      "Tanggal": "2026-06-29T23:40:50.067Z",
+      "Nama_Pelanggan": "Joko",
+      "Total_Item": 4,
+      "Total_Harga": 76000,
+      "Bayar": 80000,
+      "Kembali": 4000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00011/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00012",
+      "Tanggal": "2026-06-29T23:40:50.067Z",
+      "Nama_Pelanggan": "Andi",
+      "Total_Item": 4,
+      "Total_Harga": 77000,
+      "Bayar": 80000,
+      "Kembali": 3000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00012/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00013",
+      "Tanggal": "2026-06-29T23:40:50.067Z",
+      "Nama_Pelanggan": "Dewi",
+      "Total_Item": 2,
+      "Total_Harga": 36000,
+      "Bayar": 40000,
+      "Kembali": 4000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00013/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00014",
+      "Tanggal": "2026-06-29T23:40:50.067Z",
+      "Nama_Pelanggan": "Gita",
+      "Total_Item": 2,
+      "Total_Harga": 50000,
+      "Bayar": 50000,
+      "Kembali": 0,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00014/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00015",
+      "Tanggal": "2026-06-29T23:40:50.067Z",
+      "Nama_Pelanggan": "Eka",
+      "Total_Item": 2,
+      "Total_Harga": 35000,
+      "Bayar": 40000,
+      "Kembali": 5000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00015/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00016",
+      "Tanggal": "2026-06-29T23:40:50.067Z",
+      "Nama_Pelanggan": "Gita",
+      "Total_Item": 3,
+      "Total_Harga": 62000,
+      "Bayar": 70000,
+      "Kembali": 8000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00016/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00017",
+      "Tanggal": "2026-06-29T23:40:50.067Z",
+      "Nama_Pelanggan": "Gita",
+      "Total_Item": 4,
+      "Total_Harga": 88000,
+      "Bayar": 90000,
+      "Kembali": 2000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00017/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00018",
+      "Tanggal": "2026-06-30T23:40:50.067Z",
+      "Nama_Pelanggan": "Joko",
+      "Total_Item": 1,
+      "Total_Harga": 15000,
+      "Bayar": 20000,
+      "Kembali": 5000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00018/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00019",
+      "Tanggal": "2026-06-30T23:40:50.067Z",
+      "Nama_Pelanggan": "Eka",
+      "Total_Item": 2,
+      "Total_Harga": 30000,
+      "Bayar": 30000,
+      "Kembali": 0,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00019/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00020",
+      "Tanggal": "2026-06-30T23:40:50.067Z",
+      "Nama_Pelanggan": "Gita",
+      "Total_Item": 2,
+      "Total_Harga": 44000,
+      "Bayar": 50000,
+      "Kembali": 6000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00020/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00021",
+      "Tanggal": "2026-07-01T23:40:50.067Z",
+      "Nama_Pelanggan": "Ferry",
+      "Total_Item": 3,
+      "Total_Harga": 65000,
+      "Bayar": 70000,
+      "Kembali": 5000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00021/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00022",
+      "Tanggal": "2026-07-01T23:40:50.067Z",
+      "Nama_Pelanggan": "Eka",
+      "Total_Item": 5,
+      "Total_Harga": 103000,
+      "Bayar": 110000,
+      "Kembali": 7000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00022/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00023",
+      "Tanggal": "2026-07-01T23:40:50.067Z",
+      "Nama_Pelanggan": "Hana",
+      "Total_Item": 2,
+      "Total_Harga": 30000,
+      "Bayar": 30000,
+      "Kembali": 0,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00023/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00024",
+      "Tanggal": "2026-07-01T23:40:50.067Z",
+      "Nama_Pelanggan": "Indra",
+      "Total_Item": 2,
+      "Total_Harga": 44000,
+      "Bayar": 50000,
+      "Kembali": 6000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00024/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00025",
+      "Tanggal": "2026-07-02T23:40:50.067Z",
+      "Nama_Pelanggan": "Dewi",
+      "Total_Item": 3,
+      "Total_Harga": 55000,
+      "Bayar": 60000,
+      "Kembali": 5000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00025/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00026",
+      "Tanggal": "2026-07-02T23:40:50.067Z",
+      "Nama_Pelanggan": "Indra",
+      "Total_Item": 5,
+      "Total_Harga": 89000,
+      "Bayar": 90000,
+      "Kembali": 1000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00026/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00027",
+      "Tanggal": "2026-07-02T23:40:50.067Z",
+      "Nama_Pelanggan": "Gita",
+      "Total_Item": 4,
+      "Total_Harga": 67000,
+      "Bayar": 70000,
+      "Kembali": 3000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00027/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00028",
+      "Tanggal": "2026-07-02T23:40:50.067Z",
+      "Nama_Pelanggan": "Budi",
+      "Total_Item": 4,
+      "Total_Harga": 94000,
+      "Bayar": 100000,
+      "Kembali": 6000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00028/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00029",
+      "Tanggal": "2026-07-02T23:40:50.067Z",
+      "Nama_Pelanggan": "Budi",
+      "Total_Item": 3,
+      "Total_Harga": 45000,
+      "Bayar": 50000,
+      "Kembali": 5000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00029/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00030",
+      "Tanggal": "2026-07-02T23:40:50.067Z",
+      "Nama_Pelanggan": "Hana",
+      "Total_Item": 3,
+      "Total_Harga": 59000,
+      "Bayar": 60000,
+      "Kembali": 1000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00030/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00031",
+      "Tanggal": "2026-07-03T23:40:50.067Z",
+      "Nama_Pelanggan": "Andi",
+      "Total_Item": 1,
+      "Total_Harga": 15000,
+      "Bayar": 20000,
+      "Kembali": 5000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00031/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00032",
+      "Tanggal": "2026-07-03T23:40:50.067Z",
+      "Nama_Pelanggan": "Andi",
+      "Total_Item": 3,
+      "Total_Harga": 65000,
+      "Bayar": 70000,
+      "Kembali": 5000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00032/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00033",
+      "Tanggal": "2026-07-03T23:40:50.067Z",
+      "Nama_Pelanggan": "Joko",
+      "Total_Item": 4,
+      "Total_Harga": 68000,
+      "Bayar": 70000,
+      "Kembali": 2000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00033/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00034",
+      "Tanggal": "2026-07-03T23:40:50.067Z",
+      "Nama_Pelanggan": "Eka",
+      "Total_Item": 2,
+      "Total_Harga": 35000,
+      "Bayar": 40000,
+      "Kembali": 5000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00034/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00035",
+      "Tanggal": "2026-07-03T23:40:50.067Z",
+      "Nama_Pelanggan": "Hana",
+      "Total_Item": 2,
+      "Total_Harga": 35000,
+      "Bayar": 40000,
+      "Kembali": 5000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00035/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00036",
+      "Tanggal": "2026-07-03T23:40:50.067Z",
+      "Nama_Pelanggan": "Budi",
+      "Total_Item": 2,
+      "Total_Harga": 44000,
+      "Bayar": 50000,
+      "Kembali": 6000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00036/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00037",
+      "Tanggal": "2026-07-04T23:40:50.067Z",
+      "Nama_Pelanggan": "Joko",
+      "Total_Item": 4,
+      "Total_Harga": 90000,
+      "Bayar": 90000,
+      "Kembali": 0,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00037/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00038",
+      "Tanggal": "2026-07-04T23:40:50.067Z",
+      "Nama_Pelanggan": "Eka",
+      "Total_Item": 1,
+      "Total_Harga": 15000,
+      "Bayar": 20000,
+      "Kembali": 5000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00038/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00039",
+      "Tanggal": "2026-07-04T23:40:50.067Z",
+      "Nama_Pelanggan": "Gita",
+      "Total_Item": 1,
+      "Total_Harga": 25000,
+      "Bayar": 30000,
+      "Kembali": 5000,
+      "Kasir": "Rian Kasir",
+      "PDF_URL": "/api/receipt/TRX-00039/print",
+      "Status": "Paid"
+    },
+    {
+      "ID_Transaksi": "TRX-00040",
+      "Tanggal": "2026-07-04T23:40:50.067Z",
+      "Nama_Pelanggan": "Joko",
+      "Total_Item": 5,
+      "Total_Harga": 92000,
+      "Bayar": 100000,
+      "Kembali": 8000,
+      "Kasir": "Maissy Owner",
+      "PDF_URL": "/api/receipt/TRX-00040/print",
+      "Status": "Paid"
+    }
+  ],
+  "transaction_details": [
+    {
+      "ID_Detail": "DTL-000001",
+      "ID_Transaksi": "TRX-00001",
+      "ID_Menu": "MN-007",
+      "Nama_Menu": "Ice Lychee Tea",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000002",
+      "ID_Transaksi": "TRX-00001",
+      "ID_Menu": "MN-001",
+      "Nama_Menu": "Es Kopi Susu Maissy",
+      "Qty": 2,
+      "Harga_Satuan": 18000,
+      "Subtotal": 36000
+    },
+    {
+      "ID_Detail": "DTL-000003",
+      "ID_Transaksi": "TRX-00001",
+      "ID_Menu": "MN-002",
+      "Nama_Menu": "Espresso Double",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000004",
+      "ID_Transaksi": "TRX-00002",
+      "ID_Menu": "MN-004",
+      "Nama_Menu": "Ice Caramel Macchiato",
+      "Qty": 2,
+      "Harga_Satuan": 25000,
+      "Subtotal": 50000
+    },
+    {
+      "ID_Detail": "DTL-000005",
+      "ID_Transaksi": "TRX-00002",
+      "ID_Menu": "MN-001",
+      "Nama_Menu": "Es Kopi Susu Maissy",
+      "Qty": 1,
+      "Harga_Satuan": 18000,
+      "Subtotal": 18000
+    },
+    {
+      "ID_Detail": "DTL-000006",
+      "ID_Transaksi": "TRX-00003",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000007",
+      "ID_Transaksi": "TRX-00004",
+      "ID_Menu": "MN-002",
+      "Nama_Menu": "Espresso Double",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000008",
+      "ID_Transaksi": "TRX-00004",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000009",
+      "ID_Transaksi": "TRX-00005",
+      "ID_Menu": "MN-001",
+      "Nama_Menu": "Es Kopi Susu Maissy",
+      "Qty": 1,
+      "Harga_Satuan": 18000,
+      "Subtotal": 18000
+    },
+    {
+      "ID_Detail": "DTL-000010",
+      "ID_Transaksi": "TRX-00005",
+      "ID_Menu": "MN-002",
+      "Nama_Menu": "Espresso Double",
+      "Qty": 2,
+      "Harga_Satuan": 15000,
+      "Subtotal": 30000
+    },
+    {
+      "ID_Detail": "DTL-000011",
+      "ID_Transaksi": "TRX-00005",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 1,
+      "Harga_Satuan": 22000,
+      "Subtotal": 22000
+    },
+    {
+      "ID_Detail": "DTL-000012",
+      "ID_Transaksi": "TRX-00006",
+      "ID_Menu": "MN-001",
+      "Nama_Menu": "Es Kopi Susu Maissy",
+      "Qty": 2,
+      "Harga_Satuan": 18000,
+      "Subtotal": 36000
+    },
+    {
+      "ID_Detail": "DTL-000013",
+      "ID_Transaksi": "TRX-00006",
+      "ID_Menu": "MN-008",
+      "Nama_Menu": "Butter Croissant",
+      "Qty": 2,
+      "Harga_Satuan": 18000,
+      "Subtotal": 36000
+    },
+    {
+      "ID_Detail": "DTL-000014",
+      "ID_Transaksi": "TRX-00007",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 1,
+      "Harga_Satuan": 22000,
+      "Subtotal": 22000
+    },
+    {
+      "ID_Detail": "DTL-000015",
+      "ID_Transaksi": "TRX-00008",
+      "ID_Menu": "MN-006",
+      "Nama_Menu": "Chocolate Signature",
+      "Qty": 2,
+      "Harga_Satuan": 20000,
+      "Subtotal": 40000
+    },
+    {
+      "ID_Detail": "DTL-000016",
+      "ID_Transaksi": "TRX-00008",
+      "ID_Menu": "MN-008",
+      "Nama_Menu": "Butter Croissant",
+      "Qty": 1,
+      "Harga_Satuan": 18000,
+      "Subtotal": 18000
+    },
+    {
+      "ID_Detail": "DTL-000017",
+      "ID_Transaksi": "TRX-00009",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000018",
+      "ID_Transaksi": "TRX-00009",
+      "ID_Menu": "MN-010",
+      "Nama_Menu": "Choco Lava Cake",
+      "Qty": 2,
+      "Harga_Satuan": 20000,
+      "Subtotal": 40000
+    },
+    {
+      "ID_Detail": "DTL-000019",
+      "ID_Transaksi": "TRX-00009",
+      "ID_Menu": "MN-008",
+      "Nama_Menu": "Butter Croissant",
+      "Qty": 2,
+      "Harga_Satuan": 18000,
+      "Subtotal": 36000
+    },
+    {
+      "ID_Detail": "DTL-000020",
+      "ID_Transaksi": "TRX-00010",
+      "ID_Menu": "MN-002",
+      "Nama_Menu": "Espresso Double",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000021",
+      "ID_Transaksi": "TRX-00010",
+      "ID_Menu": "MN-010",
+      "Nama_Menu": "Choco Lava Cake",
+      "Qty": 1,
+      "Harga_Satuan": 20000,
+      "Subtotal": 20000
+    },
+    {
+      "ID_Detail": "DTL-000022",
+      "ID_Transaksi": "TRX-00011",
+      "ID_Menu": "MN-008",
+      "Nama_Menu": "Butter Croissant",
+      "Qty": 2,
+      "Harga_Satuan": 18000,
+      "Subtotal": 36000
+    },
+    {
+      "ID_Detail": "DTL-000023",
+      "ID_Transaksi": "TRX-00011",
+      "ID_Menu": "MN-006",
+      "Nama_Menu": "Chocolate Signature",
+      "Qty": 2,
+      "Harga_Satuan": 20000,
+      "Subtotal": 40000
+    },
+    {
+      "ID_Detail": "DTL-000024",
+      "ID_Transaksi": "TRX-00012",
+      "ID_Menu": "MN-008",
+      "Nama_Menu": "Butter Croissant",
+      "Qty": 1,
+      "Harga_Satuan": 18000,
+      "Subtotal": 18000
+    },
+    {
+      "ID_Detail": "DTL-000025",
+      "ID_Transaksi": "TRX-00012",
+      "ID_Menu": "MN-005",
+      "Nama_Menu": "Ice Matcha Latte",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000026",
+      "ID_Transaksi": "TRX-00012",
+      "ID_Menu": "MN-002",
+      "Nama_Menu": "Espresso Double",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000027",
+      "ID_Transaksi": "TRX-00013",
+      "ID_Menu": "MN-001",
+      "Nama_Menu": "Es Kopi Susu Maissy",
+      "Qty": 2,
+      "Harga_Satuan": 18000,
+      "Subtotal": 36000
+    },
+    {
+      "ID_Detail": "DTL-000028",
+      "ID_Transaksi": "TRX-00014",
+      "ID_Menu": "MN-004",
+      "Nama_Menu": "Ice Caramel Macchiato",
+      "Qty": 2,
+      "Harga_Satuan": 25000,
+      "Subtotal": 50000
+    },
+    {
+      "ID_Detail": "DTL-000029",
+      "ID_Transaksi": "TRX-00015",
+      "ID_Menu": "MN-010",
+      "Nama_Menu": "Choco Lava Cake",
+      "Qty": 1,
+      "Harga_Satuan": 20000,
+      "Subtotal": 20000
+    },
+    {
+      "ID_Detail": "DTL-000030",
+      "ID_Transaksi": "TRX-00015",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000031",
+      "ID_Transaksi": "TRX-00016",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000032",
+      "ID_Transaksi": "TRX-00016",
+      "ID_Menu": "MN-008",
+      "Nama_Menu": "Butter Croissant",
+      "Qty": 1,
+      "Harga_Satuan": 18000,
+      "Subtotal": 18000
+    },
+    {
+      "ID_Detail": "DTL-000033",
+      "ID_Transaksi": "TRX-00017",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000034",
+      "ID_Transaksi": "TRX-00017",
+      "ID_Menu": "MN-005",
+      "Nama_Menu": "Ice Matcha Latte",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000035",
+      "ID_Transaksi": "TRX-00018",
+      "ID_Menu": "MN-007",
+      "Nama_Menu": "Ice Lychee Tea",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000036",
+      "ID_Transaksi": "TRX-00019",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 2,
+      "Harga_Satuan": 15000,
+      "Subtotal": 30000
+    },
+    {
+      "ID_Detail": "DTL-000037",
+      "ID_Transaksi": "TRX-00020",
+      "ID_Menu": "MN-005",
+      "Nama_Menu": "Ice Matcha Latte",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000038",
+      "ID_Transaksi": "TRX-00021",
+      "ID_Menu": "MN-004",
+      "Nama_Menu": "Ice Caramel Macchiato",
+      "Qty": 1,
+      "Harga_Satuan": 25000,
+      "Subtotal": 25000
+    },
+    {
+      "ID_Detail": "DTL-000039",
+      "ID_Transaksi": "TRX-00021",
+      "ID_Menu": "MN-010",
+      "Nama_Menu": "Choco Lava Cake",
+      "Qty": 2,
+      "Harga_Satuan": 20000,
+      "Subtotal": 40000
+    },
+    {
+      "ID_Detail": "DTL-000040",
+      "ID_Transaksi": "TRX-00022",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000041",
+      "ID_Transaksi": "TRX-00022",
+      "ID_Menu": "MN-005",
+      "Nama_Menu": "Ice Matcha Latte",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000042",
+      "ID_Transaksi": "TRX-00022",
+      "ID_Menu": "MN-002",
+      "Nama_Menu": "Espresso Double",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000043",
+      "ID_Transaksi": "TRX-00023",
+      "ID_Menu": "MN-002",
+      "Nama_Menu": "Espresso Double",
+      "Qty": 2,
+      "Harga_Satuan": 15000,
+      "Subtotal": 30000
+    },
+    {
+      "ID_Detail": "DTL-000044",
+      "ID_Transaksi": "TRX-00024",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000045",
+      "ID_Transaksi": "TRX-00025",
+      "ID_Menu": "MN-006",
+      "Nama_Menu": "Chocolate Signature",
+      "Qty": 1,
+      "Harga_Satuan": 20000,
+      "Subtotal": 20000
+    },
+    {
+      "ID_Detail": "DTL-000046",
+      "ID_Transaksi": "TRX-00025",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000047",
+      "ID_Transaksi": "TRX-00025",
+      "ID_Menu": "MN-010",
+      "Nama_Menu": "Choco Lava Cake",
+      "Qty": 1,
+      "Harga_Satuan": 20000,
+      "Subtotal": 20000
+    },
+    {
+      "ID_Detail": "DTL-000048",
+      "ID_Transaksi": "TRX-00026",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000049",
+      "ID_Transaksi": "TRX-00026",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 2,
+      "Harga_Satuan": 15000,
+      "Subtotal": 30000
+    },
+    {
+      "ID_Detail": "DTL-000050",
+      "ID_Transaksi": "TRX-00026",
+      "ID_Menu": "MN-002",
+      "Nama_Menu": "Espresso Double",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000051",
+      "ID_Transaksi": "TRX-00027",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 1,
+      "Harga_Satuan": 22000,
+      "Subtotal": 22000
+    },
+    {
+      "ID_Detail": "DTL-000052",
+      "ID_Transaksi": "TRX-00027",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000053",
+      "ID_Transaksi": "TRX-00027",
+      "ID_Menu": "MN-002",
+      "Nama_Menu": "Espresso Double",
+      "Qty": 2,
+      "Harga_Satuan": 15000,
+      "Subtotal": 30000
+    },
+    {
+      "ID_Detail": "DTL-000054",
+      "ID_Transaksi": "TRX-00028",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000055",
+      "ID_Transaksi": "TRX-00028",
+      "ID_Menu": "MN-004",
+      "Nama_Menu": "Ice Caramel Macchiato",
+      "Qty": 2,
+      "Harga_Satuan": 25000,
+      "Subtotal": 50000
+    },
+    {
+      "ID_Detail": "DTL-000056",
+      "ID_Transaksi": "TRX-00029",
+      "ID_Menu": "MN-002",
+      "Nama_Menu": "Espresso Double",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000057",
+      "ID_Transaksi": "TRX-00029",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 2,
+      "Harga_Satuan": 15000,
+      "Subtotal": 30000
+    },
+    {
+      "ID_Detail": "DTL-000058",
+      "ID_Transaksi": "TRX-00030",
+      "ID_Menu": "MN-005",
+      "Nama_Menu": "Ice Matcha Latte",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000059",
+      "ID_Transaksi": "TRX-00030",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000060",
+      "ID_Transaksi": "TRX-00031",
+      "ID_Menu": "MN-007",
+      "Nama_Menu": "Ice Lychee Tea",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000061",
+      "ID_Transaksi": "TRX-00032",
+      "ID_Menu": "MN-004",
+      "Nama_Menu": "Ice Caramel Macchiato",
+      "Qty": 1,
+      "Harga_Satuan": 25000,
+      "Subtotal": 25000
+    },
+    {
+      "ID_Detail": "DTL-000062",
+      "ID_Transaksi": "TRX-00032",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 1,
+      "Harga_Satuan": 22000,
+      "Subtotal": 22000
+    },
+    {
+      "ID_Detail": "DTL-000063",
+      "ID_Transaksi": "TRX-00032",
+      "ID_Menu": "MN-008",
+      "Nama_Menu": "Butter Croissant",
+      "Qty": 1,
+      "Harga_Satuan": 18000,
+      "Subtotal": 18000
+    },
+    {
+      "ID_Detail": "DTL-000064",
+      "ID_Transaksi": "TRX-00033",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 2,
+      "Harga_Satuan": 15000,
+      "Subtotal": 30000
+    },
+    {
+      "ID_Detail": "DTL-000065",
+      "ID_Transaksi": "TRX-00033",
+      "ID_Menu": "MN-008",
+      "Nama_Menu": "Butter Croissant",
+      "Qty": 1,
+      "Harga_Satuan": 18000,
+      "Subtotal": 18000
+    },
+    {
+      "ID_Detail": "DTL-000066",
+      "ID_Transaksi": "TRX-00033",
+      "ID_Menu": "MN-010",
+      "Nama_Menu": "Choco Lava Cake",
+      "Qty": 1,
+      "Harga_Satuan": 20000,
+      "Subtotal": 20000
+    },
+    {
+      "ID_Detail": "DTL-000067",
+      "ID_Transaksi": "TRX-00034",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000068",
+      "ID_Transaksi": "TRX-00034",
+      "ID_Menu": "MN-006",
+      "Nama_Menu": "Chocolate Signature",
+      "Qty": 1,
+      "Harga_Satuan": 20000,
+      "Subtotal": 20000
+    },
+    {
+      "ID_Detail": "DTL-000069",
+      "ID_Transaksi": "TRX-00035",
+      "ID_Menu": "MN-007",
+      "Nama_Menu": "Ice Lychee Tea",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000070",
+      "ID_Transaksi": "TRX-00035",
+      "ID_Menu": "MN-006",
+      "Nama_Menu": "Chocolate Signature",
+      "Qty": 1,
+      "Harga_Satuan": 20000,
+      "Subtotal": 20000
+    },
+    {
+      "ID_Detail": "DTL-000071",
+      "ID_Transaksi": "TRX-00036",
+      "ID_Menu": "MN-005",
+      "Nama_Menu": "Ice Matcha Latte",
+      "Qty": 2,
+      "Harga_Satuan": 22000,
+      "Subtotal": 44000
+    },
+    {
+      "ID_Detail": "DTL-000072",
+      "ID_Transaksi": "TRX-00037",
+      "ID_Menu": "MN-006",
+      "Nama_Menu": "Chocolate Signature",
+      "Qty": 2,
+      "Harga_Satuan": 20000,
+      "Subtotal": 40000
+    },
+    {
+      "ID_Detail": "DTL-000073",
+      "ID_Transaksi": "TRX-00037",
+      "ID_Menu": "MN-004",
+      "Nama_Menu": "Ice Caramel Macchiato",
+      "Qty": 2,
+      "Harga_Satuan": 25000,
+      "Subtotal": 50000
+    },
+    {
+      "ID_Detail": "DTL-000074",
+      "ID_Transaksi": "TRX-00038",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 1,
+      "Harga_Satuan": 15000,
+      "Subtotal": 15000
+    },
+    {
+      "ID_Detail": "DTL-000075",
+      "ID_Transaksi": "TRX-00039",
+      "ID_Menu": "MN-004",
+      "Nama_Menu": "Ice Caramel Macchiato",
+      "Qty": 1,
+      "Harga_Satuan": 25000,
+      "Subtotal": 25000
+    },
+    {
+      "ID_Detail": "DTL-000076",
+      "ID_Transaksi": "TRX-00040",
+      "ID_Menu": "MN-009",
+      "Nama_Menu": "French Fries Extra",
+      "Qty": 2,
+      "Harga_Satuan": 15000,
+      "Subtotal": 30000
+    },
+    {
+      "ID_Detail": "DTL-000077",
+      "ID_Transaksi": "TRX-00040",
+      "ID_Menu": "MN-003",
+      "Nama_Menu": "Hot Cappuccino",
+      "Qty": 1,
+      "Harga_Satuan": 22000,
+      "Subtotal": 22000
+    },
+    {
+      "ID_Detail": "DTL-000078",
+      "ID_Transaksi": "TRX-00040",
+      "ID_Menu": "MN-006",
+      "Nama_Menu": "Chocolate Signature",
+      "Qty": 2,
+      "Harga_Satuan": 20000,
+      "Subtotal": 40000
+    },
+    {
+      "ID_Detail": "DTL-000079",
+      "ID_Transaksi": "TRX-00041",
+      "ID_Menu": "MN-001",
+      "Nama_Menu": "Es Kopi Susu Maissy",
+      "Qty": 2,
+      "Harga_Satuan": 18000,
+      "Subtotal": 36000
+    },
+    {
+      "ID_Detail": "DTL-000080",
+      "ID_Transaksi": "TRX-00042",
+      "ID_Menu": "MN-001",
+      "Nama_Menu": "Es Kopi Susu Maissy",
+      "Qty": 1,
+      "Harga_Satuan": 18000,
+      "Subtotal": 18000
+    },
+    {
+      "ID_Detail": "DTL-000081",
+      "ID_Transaksi": "TRX-00043",
+      "ID_Menu": "MN-010",
+      "Nama_Menu": "Choco Lava Cake",
+      "Qty": 1,
+      "Harga_Satuan": 20000,
+      "Subtotal": 20000
+    },
+    {
+      "ID_Detail": "DTL-000082",
+      "ID_Transaksi": "TRX-00044",
+      "ID_Menu": "MN-001",
+      "Nama_Menu": "Es Kopi Susu Maissy",
+      "Qty": 1,
+      "Harga_Satuan": 18000,
+      "Subtotal": 18000
+    }
+  ],
+  "activity_log": [
+    {
+      "Timestamp": "2026-07-05T00:34:18.878Z",
+      "ID_User": "USR-000",
+      "Nama_User": "Asrianto (Creator)",
+      "Action": "LOGIN",
+      "Module": "AUTH",
+      "Description": "Pengguna Asrianto (Creator) (creator) berhasil login."
+    },
+    {
+      "Timestamp": "2026-07-05T00:25:45.593Z",
+      "ID_User": "USR-001",
+      "Nama_User": "Maissy Owner",
+      "Action": "LOGIN",
+      "Module": "AUTH",
+      "Description": "Pengguna Maissy Owner (admin) berhasil login."
+    },
+    {
+      "Timestamp": "2026-07-05T00:23:50.132Z",
+      "ID_User": "USR-004",
+      "Nama_User": "esa",
+      "Action": "LOGIN",
+      "Module": "AUTH",
+      "Description": "Pengguna esa (kasir) berhasil login."
+    },
+    {
+      "Timestamp": "2026-07-05T00:23:37.353Z",
+      "ID_User": "USR-004",
+      "Nama_User": "esa",
+      "Action": "REGISTER",
+      "Module": "AUTH",
+      "Description": "Pendaftaran pengguna baru esa sebagai kasir berhasil."
+    },
+    {
+      "Timestamp": "2026-07-05T00:22:05.369Z",
+      "ID_User": "USR-000",
+      "Nama_User": "Asrianto (Creator)",
+      "Action": "CHECKOUT",
+      "Module": "POS",
+      "Description": "Transaksi TRX-00044 berhasil dibuat untuk Pelanggan: diana. Total: Rp 18.000"
+    },
+    {
+      "Timestamp": "2026-07-05T00:20:21.626Z",
+      "ID_User": "USR-000",
+      "Nama_User": "Asrianto (Creator)",
+      "Action": "SWITCH_ACTIVE_CAFE",
+      "Module": "SETTINGS",
+      "Description": "Mengubah kafe aktif menjadi: zona cafe (ID: 1234)"
+    },
+    {
+      "Timestamp": "2026-07-05T00:20:09.879Z",
+      "ID_User": "USR-000",
+      "Nama_User": "Asrianto (Creator)",
+      "Action": "REGISTER_CAFE",
+      "Module": "SETTINGS",
+      "Description": "Mendaftarkan kafe/warung baru: zona cafe (ID: 1234)"
+    },
+    {
+      "Timestamp": "2026-07-05T00:18:54.128Z",
+      "ID_User": "USR-000",
+      "Nama_User": "Asrianto (Creator)",
+      "Action": "LOGIN",
+      "Module": "AUTH",
+      "Description": "Pengguna Asrianto (Creator) (creator) berhasil login."
+    },
+    {
+      "Timestamp": "2026-07-04T23:53:09.549Z",
+      "ID_User": "USR-001",
+      "Nama_User": "Maissy Owner",
+      "Action": "LOGIN",
+      "Module": "AUTH",
+      "Description": "Pengguna Maissy Owner (admin) berhasil login."
+    },
+    {
+      "Timestamp": "2026-07-04T23:50:26.494Z",
+      "ID_User": "USR-002",
+      "Nama_User": "Rian Kasir",
+      "Action": "CHECKOUT",
+      "Module": "POS",
+      "Description": "Transaksi TRX-00043 berhasil dibuat untuk Pelanggan: guy. Total: Rp 20.000"
+    },
+    {
+      "Timestamp": "2026-07-04T23:50:02.818Z",
+      "ID_User": "USR-002",
+      "Nama_User": "Rian Kasir",
+      "Action": "LOGIN",
+      "Module": "AUTH",
+      "Description": "Pengguna Rian Kasir (kasir) berhasil login."
+    },
+    {
+      "Timestamp": "2026-07-04T23:49:19.322Z",
+      "ID_User": "USR-001",
+      "Nama_User": "Maissy Owner",
+      "Action": "CHECKOUT",
+      "Module": "POS",
+      "Description": "Transaksi TRX-00042 berhasil dibuat untuk Pelanggan: K. Total: Rp 18.000"
+    },
+    {
+      "Timestamp": "2026-07-04T23:47:55.236Z",
+      "ID_User": "USR-001",
+      "Nama_User": "Maissy Owner",
+      "Action": "LOGIN",
+      "Module": "AUTH",
+      "Description": "Pengguna Maissy Owner (admin) berhasil login."
+    },
+    {
+      "Timestamp": "2026-07-04T23:45:48.229Z",
+      "ID_User": "USR-002",
+      "Nama_User": "Rian Kasir",
+      "Action": "CHECKOUT",
+      "Module": "POS",
+      "Description": "Transaksi TRX-00041 berhasil dibuat untuk Pelanggan: K. Total: Rp 36.000"
+    },
+    {
+      "Timestamp": "2026-07-04T23:45:01.165Z",
+      "ID_User": "USR-002",
+      "Nama_User": "Rian Kasir",
+      "Action": "LOGIN",
+      "Module": "AUTH",
+      "Description": "Pengguna Rian Kasir (kasir) berhasil login."
+    },
+    {
+      "Timestamp": "2026-07-01T23:40:50.067Z",
+      "ID_User": "USR-001",
+      "Nama_User": "Maissy Owner",
+      "Action": "INITIALIZE",
+      "Module": "SYSTEM",
+      "Description": "Sistem dan basis data berhasil diinisialisasi."
+    }
+  ],
+  "settings": {
+    "namaToko": "zona cafe",
+    "alamat": "desa benua",
+    "telepon": "0812123456",
+    "pesanFooter": "sampai jumpa",
+    "googleSpreadsheetId": "1SHeYy5Vb1OaC9R_gTqC0y1-N4VzMaissySpreadsheetID",
+    "googleDriveFolderId": "1nXzPzQ2lqqaATvNybfTqcYU9lHc2DuG5",
+    "autoSync": true,
+    "cafes": [
+      {
+        "id": "cafe-maissy-coffee",
+        "namaToko": "Kafe Maissy Coffee",
+        "alamat": "Jl. Melati No. 45, Kebayoran Baru, Jakarta Selatan",
+        "telepon": "0812-3456-7890",
+        "pesanFooter": "Terima kasih telah berkunjung ke Maissy Coffee!",
+        "Created_At": "2026-07-05T00:17:30.775Z"
+      },
+      {
+        "id": "1234",
+        "namaToko": "zona cafe",
+        "alamat": "desa benua",
+        "telepon": "0812123456",
+        "pesanFooter": "sampai jumpa",
+        "Created_At": "2026-07-05T00:20:09.879Z"
+      }
+    ],
+    "activeCafeId": "1234"
+  }
+}

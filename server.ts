@@ -144,6 +144,17 @@ function getInitialData() {
     googleSpreadsheetId: '1SHeYy5Vb1OaC9R_gTqC0y1-N4VzMaissySpreadsheetID',
     googleDriveFolderId: '1nXzPzQ2lqqaATvNybfTqcYU9lHc2DuG5',
     autoSync: true,
+    cafes: [
+      {
+        id: 'cafe-maissy-coffee',
+        namaToko: 'Kafe Maissy Coffee',
+        alamat: 'Jl. Melati No. 45, Kebayoran Baru, Jakarta Selatan',
+        telepon: '0812-3456-7890',
+        pesanFooter: 'Terima kasih telah berkunjung ke Maissy Coffee!',
+        Created_At: new Date().toISOString()
+      }
+    ],
+    activeCafeId: 'cafe-maissy-coffee'
   };
 
   // Generate mock transactions for the last 7 days to populate graphs
@@ -271,6 +282,57 @@ async function initDatabase() {
       }
     } else {
       globalDb = getInitialData();
+    }
+  }
+
+  // Retrofit existing database with cafes and activeCafeId if missing
+  if (globalDb) {
+    let changed = false;
+    if (!globalDb.settings) {
+      globalDb.settings = {};
+    }
+    if (!globalDb.settings.cafes || globalDb.settings.cafes.length === 0) {
+      globalDb.settings.cafes = [
+        {
+          id: 'cafe-maissy-coffee',
+          namaToko: globalDb.settings.namaToko || 'Kafe Maissy Coffee',
+          alamat: globalDb.settings.alamat || 'Jl. Melati No. 45, Kebayoran Baru, Jakarta Selatan',
+          telepon: globalDb.settings.telepon || '0812-3456-7890',
+          pesanFooter: globalDb.settings.pesanFooter || 'Terima kasih telah berkunjung ke Maissy Coffee!',
+          Created_At: new Date().toISOString()
+        }
+      ];
+      globalDb.settings.activeCafeId = 'cafe-maissy-coffee';
+      changed = true;
+    }
+    
+    // Ensure creator user is created and updated to 'creator' role
+    const creatorEmail = 'asriantofistek015@gmail.com';
+    if (!globalDb.users) {
+      globalDb.users = [];
+    }
+    let creatorUser = globalDb.users.find((u: any) => u.Email.toLowerCase() === creatorEmail.toLowerCase());
+    if (!creatorUser) {
+      creatorUser = {
+        ID_User: 'USR-000',
+        Nama: 'Asrianto (Creator)',
+        Email: creatorEmail,
+        Role: 'creator',
+        Status: 'active',
+        Password: 'admin123',
+        Created_At: new Date().toISOString()
+      };
+      globalDb.users.unshift(creatorUser);
+      console.log('[Database] Created creator user:', creatorEmail);
+      changed = true;
+    } else if (creatorUser.Role !== 'creator') {
+      creatorUser.Role = 'creator';
+      console.log('[Database] Upgraded user to creator:', creatorEmail);
+      changed = true;
+    }
+
+    if (changed) {
+      writeDB(globalDb);
     }
   }
 }
@@ -428,7 +490,7 @@ async function startServer() {
 
   // Auth: Register
   app.post('/api/auth/register', (req, res) => {
-    const { nama, email, password, role } = req.body;
+    const { nama, email, password, role, cafeId } = req.body;
     const db = readDB();
 
     const existingUser = db.users.find((u: User) => u.Email.toLowerCase() === email.toLowerCase());
@@ -444,6 +506,7 @@ async function startServer() {
       Status: 'active',
       Password: password,
       Created_At: new Date().toISOString(),
+      cafeId: cafeId || db.settings?.activeCafeId || 'cafe-maissy-coffee',
     };
 
     db.users.push(newUser);
@@ -493,14 +556,24 @@ async function startServer() {
 
   // Users: Get all
   app.get('/api/users', (req, res) => {
+    const { userId } = req.query;
     const db = readDB();
-    const cleanUsers = db.users.map(({ Password, ...u }: any) => u);
+    let filteredUsers = db.users;
+
+    if (userId) {
+      const user = db.users.find((u: User) => u.ID_User === String(userId));
+      if (user && user.Role !== 'creator' && user.cafeId) {
+        filteredUsers = db.users.filter((u: User) => u.cafeId === user.cafeId);
+      }
+    }
+
+    const cleanUsers = filteredUsers.map(({ Password, ...u }: any) => u);
     res.json(cleanUsers);
   });
 
   // Users: Create User (Admin only action)
   app.post('/api/users', (req, res) => {
-    const { nama, email, password, role, status, actorId } = req.body;
+    const { nama, email, password, role, status, actorId, cafeId } = req.body;
     const db = readDB();
 
     const existingUser = db.users.find((u: User) => u.Email.toLowerCase() === email.toLowerCase());
@@ -516,6 +589,7 @@ async function startServer() {
       Status: status || 'active',
       Password: password || '123456',
       Created_At: new Date().toISOString(),
+      cafeId: cafeId || db.settings?.activeCafeId || 'cafe-maissy-coffee',
     };
 
     db.users.push(newUser);
@@ -537,7 +611,7 @@ async function startServer() {
   // Users: Toggle Status / Update User
   app.put('/api/users/:id', (req, res) => {
     const { id } = req.params;
-    const { nama, email, password, role, status, actorId } = req.body;
+    const { nama, email, password, role, status, actorId, cafeId } = req.body;
     const db = readDB();
     const userIndex = db.users.findIndex((u: User) => u.ID_User === id);
 
@@ -562,6 +636,7 @@ async function startServer() {
       Password: password !== undefined ? password : oldUser.Password,
       Role: role !== undefined ? role : oldUser.Role,
       Status: status !== undefined ? status : oldUser.Status,
+      cafeId: cafeId !== undefined ? cafeId : oldUser.cafeId,
     };
 
     const actor = db.users.find((u: User) => u.ID_User === actorId) || { Nama: 'System' };
@@ -618,10 +693,10 @@ async function startServer() {
 
   // Menus: Save / CRUD
   app.post('/api/menus', (req, res) => {
-    const { nama, kategori, harga, status, fotoBase64, fotoFileName, actorId } = req.body;
+    const { nama, kategori, harga, status, fotoBase64, fotoFileName, fotoUrl, actorId } = req.body;
     const db = readDB();
 
-    let finalFotoUrl = 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=200'; // Default
+    let finalFotoUrl = fotoUrl || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=200'; // Default
 
     // Handle upload if base64 provided
     if (fotoBase64) {
@@ -674,7 +749,7 @@ async function startServer() {
 
   app.put('/api/menus/:id', (req, res) => {
     const { id } = req.params;
-    const { nama, kategori, harga, status, fotoBase64, fotoFileName, actorId } = req.body;
+    const { nama, kategori, harga, status, fotoBase64, fotoFileName, fotoUrl, actorId } = req.body;
     const db = readDB();
     const menuIndex = db.menus.findIndex((m: Menu) => m.ID_Menu === id);
 
@@ -683,7 +758,7 @@ async function startServer() {
     }
 
     const oldMenu = db.menus[menuIndex];
-    let finalFotoUrl = oldMenu.Foto_URL;
+    let finalFotoUrl = fotoUrl || oldMenu.Foto_URL;
 
     if (fotoBase64) {
       try {
@@ -752,36 +827,321 @@ async function startServer() {
 
   // Settings
   app.get('/api/settings', (req, res) => {
+    const { userId } = req.query;
     const db = readDB();
-    res.json(db.settings);
+    
+    let settingsResponse = { ...db.settings };
+    
+    if (userId) {
+      const user = db.users.find((u: User) => u.ID_User === String(userId));
+      if (user && user.Role !== 'creator' && user.cafeId) {
+        const userCafe = db.settings.cafes?.find((c: any) => c.id === user.cafeId);
+        if (userCafe) {
+          settingsResponse = {
+            ...settingsResponse,
+            namaToko: userCafe.namaToko,
+            alamat: userCafe.alamat,
+            telepon: userCafe.telepon,
+            pesanFooter: userCafe.pesanFooter,
+            logoUrl: userCafe.logoUrl,
+          };
+        }
+      }
+    }
+    
+    res.json(settingsResponse);
   });
 
   app.put('/api/settings', (req, res) => {
-    const { namaToko, alamat, telepon, pesanFooter, googleSpreadsheetId, googleDriveFolderId, autoSync, actorId } = req.body;
+    const { namaToko, alamat, telepon, pesanFooter, googleSpreadsheetId, googleDriveFolderId, autoSync, logoUrl, actorId } = req.body;
     const db = readDB();
 
-    db.settings = {
-      namaToko: namaToko || db.settings.namaToko,
-      alamat: alamat || db.settings.alamat,
-      telepon: telepon || db.settings.telepon,
-      pesanFooter: pesanFooter || db.settings.pesanFooter,
-      googleSpreadsheetId: googleSpreadsheetId || db.settings.googleSpreadsheetId,
-      googleDriveFolderId: googleDriveFolderId || db.settings.googleDriveFolderId,
-      autoSync: autoSync !== undefined ? autoSync : db.settings.autoSync,
-    };
+    const actor = db.users.find((u: User) => u.ID_User === actorId);
+    const actorName = actor ? actor.Nama : 'System';
 
-    const actor = db.users.find((u: User) => u.ID_User === actorId) || { Nama: 'System' };
+    if (actor && actor.Role !== 'creator' && actor.cafeId) {
+      if (!db.settings.cafes) {
+        db.settings.cafes = [];
+      }
+      const cafeIndex = db.settings.cafes.findIndex((c: any) => c.id === actor.cafeId);
+      if (cafeIndex !== -1) {
+        db.settings.cafes[cafeIndex] = {
+          ...db.settings.cafes[cafeIndex],
+          namaToko: namaToko || db.settings.cafes[cafeIndex].namaToko,
+          alamat: alamat || db.settings.cafes[cafeIndex].alamat,
+          telepon: telepon || db.settings.cafes[cafeIndex].telepon,
+          pesanFooter: pesanFooter || db.settings.cafes[cafeIndex].pesanFooter,
+          logoUrl: logoUrl !== undefined ? logoUrl : db.settings.cafes[cafeIndex].logoUrl,
+        };
+      }
+    } else {
+      db.settings = {
+        ...db.settings,
+        namaToko: namaToko || db.settings.namaToko,
+        alamat: alamat || db.settings.alamat,
+        telepon: telepon || db.settings.telepon,
+        pesanFooter: pesanFooter || db.settings.pesanFooter,
+        googleSpreadsheetId: googleSpreadsheetId || db.settings.googleSpreadsheetId,
+        googleDriveFolderId: googleDriveFolderId || db.settings.googleDriveFolderId,
+        autoSync: autoSync !== undefined ? autoSync : db.settings.autoSync,
+        logoUrl: logoUrl !== undefined ? logoUrl : db.settings.logoUrl,
+      };
+    }
+
     db.activity_log.unshift({
       Timestamp: new Date().toISOString(),
       ID_User: actorId || 'SYSTEM',
-      Nama_User: actor.Nama,
+      Nama_User: actorName,
       Action: 'UPDATE_SETTINGS',
       Module: 'SETTINGS',
-      Description: `Memperbarui konfigurasi sistem kafe.`,
+      Description: actor && actor.Role !== 'creator' && actor.cafeId
+        ? `Memperbarui konfigurasi kafe outlet: ${namaToko || actor.cafeId}`
+        : `Memperbarui konfigurasi sistem kafe global.`,
+    });
+
+    writeDB(db, 'settings');
+    res.json({ success: true, settings: db.settings });
+  });
+
+  // --- CAFES CRUD (CREATOR ONLY) ---
+  app.get('/api/cafes', (req, res) => {
+    const db = readDB();
+    res.json(db.settings?.cafes || []);
+  });
+
+  app.post('/api/cafes', (req, res) => {
+    const { id, namaToko, alamat, telepon, pesanFooter, email, password, actorId } = req.body;
+    const db = readDB();
+
+    const actor = db.users.find((u: User) => u.ID_User === actorId);
+    if (!actor || actor.Role !== 'creator') {
+      return res.status(403).json({ success: false, message: 'Hanya pembuat aplikasi (Creator) yang dapat mendaftarkan kafe/warung baru.' });
+    }
+
+    if (!id || !namaToko) {
+      return res.status(400).json({ success: false, message: 'ID dan Nama Kafe wajib diisi.' });
+    }
+
+    if (email) {
+      const emailExists = db.users.some((u: User) => u.Email.toLowerCase() === email.toLowerCase());
+      if (emailExists) {
+        return res.status(400).json({ success: false, message: 'Email admin tersebut sudah digunakan oleh pengguna lain.' });
+      }
+    }
+
+    if (!db.settings.cafes) {
+      db.settings.cafes = [];
+    }
+
+    const normalizedId = id.toLowerCase().replace(/\s+/g, '-');
+    if (db.settings.cafes.some((c: any) => c.id === normalizedId)) {
+      return res.status(400).json({ success: false, message: 'ID Kafe sudah terdaftar.' });
+    }
+
+    const newCafe = {
+      id: normalizedId,
+      namaToko,
+      alamat: alamat || '',
+      telepon: telepon || '',
+      pesanFooter: pesanFooter || 'Terima kasih telah berkunjung!',
+      Created_At: new Date().toISOString()
+    };
+
+    db.settings.cafes.push(newCafe);
+
+    // Auto sync root settings if it's the only one or if there is no activeCafeId yet
+    if (db.settings.cafes.length === 1 || !db.settings.activeCafeId) {
+      db.settings.activeCafeId = normalizedId;
+      db.settings.namaToko = namaToko;
+      db.settings.alamat = alamat || '';
+      db.settings.telepon = telepon || '';
+      db.settings.pesanFooter = pesanFooter || 'Terima kasih telah berkunjung!';
+    }
+
+    // Auto create admin user for the cafe if email and password are provided
+    if (email) {
+      const newAdminUser: User = {
+        ID_User: `USR-${String(db.users.length + 1).padStart(3, '0')}`,
+        Nama: `Admin ${namaToko}`,
+        Email: email,
+        Role: 'admin',
+        Status: 'active',
+        Password: password || '123456',
+        Created_At: new Date().toISOString(),
+        cafeId: normalizedId,
+      };
+      db.users.push(newAdminUser);
+
+      db.activity_log.unshift({
+        Timestamp: new Date().toISOString(),
+        ID_User: actorId,
+        Nama_User: actor.Nama,
+        Action: 'CREATE_USER',
+        Module: 'USER_MANAGEMENT',
+        Description: `Membuat pengguna admin baru: Admin ${namaToko} (Email: ${email}) untuk outlet ${namaToko}`,
+      });
+    }
+
+    db.activity_log.unshift({
+      Timestamp: new Date().toISOString(),
+      ID_User: actorId,
+      Nama_User: actor.Nama,
+      Action: 'REGISTER_CAFE',
+      Module: 'SETTINGS',
+      Description: `Mendaftarkan kafe/warung baru: ${namaToko} (ID: ${normalizedId})`,
+    });
+
+    writeDB(db, 'settings');
+    res.json({ success: true, cafe: newCafe, cafes: db.settings.cafes });
+  });
+
+  app.put('/api/cafes/active', (req, res) => {
+    const { id, actorId } = req.body;
+    const db = readDB();
+
+    const actor = db.users.find((u: User) => u.ID_User === actorId);
+    if (!actor || actor.Role !== 'creator') {
+      return res.status(403).json({ success: false, message: 'Hanya pembuat aplikasi (Creator) yang dapat merubah kafe aktif.' });
+    }
+
+    if (!db.settings.cafes) {
+      db.settings.cafes = [];
+    }
+
+    const targetCafe = db.settings.cafes.find((c: any) => c.id === id);
+    if (!targetCafe) {
+      return res.status(404).json({ success: false, message: 'Kafe tidak ditemukan.' });
+    }
+
+    db.settings.activeCafeId = id;
+    
+    db.settings.namaToko = targetCafe.namaToko;
+    db.settings.alamat = targetCafe.alamat;
+    db.settings.telepon = targetCafe.telepon;
+    db.settings.pesanFooter = targetCafe.pesanFooter;
+
+    db.activity_log.unshift({
+      Timestamp: new Date().toISOString(),
+      ID_User: actorId,
+      Nama_User: actor.Nama,
+      Action: 'SWITCH_ACTIVE_CAFE',
+      Module: 'SETTINGS',
+      Description: `Mengubah kafe aktif menjadi: ${targetCafe.namaToko} (ID: ${id})`,
+    });
+
+    writeDB(db, 'settings');
+    res.json({ success: true, activeCafeId: id, settings: db.settings });
+  });
+
+  app.delete('/api/cafes/:id', (req, res) => {
+    const { id } = req.params;
+    const { actorId } = req.query;
+    const db = readDB();
+
+    const actor = db.users.find((u: User) => u.ID_User === String(actorId));
+    if (!actor || actor.Role !== 'creator') {
+      return res.status(403).json({ success: false, message: 'Hanya pembuat aplikasi (Creator) yang dapat menghapus kafe.' });
+    }
+
+    if (!db.settings.cafes) {
+      db.settings.cafes = [];
+    }
+
+    const cafeIndex = db.settings.cafes.findIndex((c: any) => c.id === id);
+    if (cafeIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Kafe tidak ditemukan.' });
+    }
+
+    const targetCafe = db.settings.cafes[cafeIndex];
+
+    if (db.settings.activeCafeId === id) {
+      return res.status(400).json({ success: false, message: 'Anda tidak dapat menghapus kafe yang sedang aktif!' });
+    }
+
+    db.settings.cafes.splice(cafeIndex, 1);
+
+    db.activity_log.unshift({
+      Timestamp: new Date().toISOString(),
+      ID_User: String(actorId),
+      Nama_User: actor.Nama,
+      Action: 'DELETE_CAFE',
+      Module: 'SETTINGS',
+      Description: `Menghapus kafe/warung: ${targetCafe.namaToko} (ID: ${id})`,
+    });
+
+    writeDB(db, 'settings');
+    res.json({ success: true, message: `Kafe ${targetCafe.namaToko} berhasil dihapus.`, cafes: db.settings.cafes });
+  });
+
+  app.post('/api/cafes/:id/reset', (req, res) => {
+    const { id } = req.params;
+    const { actorId, mode } = req.body; // mode: 'transactions_only' | 'factory_reset'
+    const db = readDB();
+
+    const actor = db.users.find((u: User) => u.ID_User === String(actorId));
+    if (!actor) {
+      return res.status(403).json({ success: false, message: 'Pengguna tidak ditemukan.' });
+    }
+
+    if (actor.Role !== 'creator') {
+      return res.status(403).json({ success: false, message: 'Hanya pembuat aplikasi (Creator) yang memiliki akses untuk mereset data outlet.' });
+    }
+
+    const targetCafe = db.settings.cafes?.find((c: any) => c.id === id);
+    if (!targetCafe && id !== 'default' && id !== db.settings.activeCafeId) {
+      return res.status(404).json({ success: false, message: 'Kafe tidak ditemukan.' });
+    }
+
+    // 1. Find all transactions for this cafe
+    const txsToDelete = db.transactions.filter((tx: any) => {
+      const txCafeId = tx.cafeId || 'cafe-maissy-coffee';
+      return txCafeId === id;
+    });
+    const txIdsToDelete = new Set(txsToDelete.map((tx: any) => tx.ID_Transaksi));
+
+    // 2. Remove transactions and details belonging to this cafe
+    db.transactions = db.transactions.filter((tx: any) => {
+      const txCafeId = tx.cafeId || 'cafe-maissy-coffee';
+      return txCafeId !== id;
+    });
+    db.transaction_details = db.transaction_details.filter((dtl: any) => !txIdsToDelete.has(dtl.ID_Transaksi));
+
+    // 3. Factory Reset Profile if requested
+    const isFactoryReset = mode === 'factory_reset';
+    if (isFactoryReset) {
+      if (targetCafe) {
+        targetCafe.namaToko = 'Warung / Kafe Baru';
+        targetCafe.alamat = 'Alamat Toko Default';
+        targetCafe.telepon = '0812-0000-0000';
+        targetCafe.pesanFooter = 'Terima kasih telah berkunjung!';
+      }
+
+      if (db.settings.activeCafeId === id) {
+        db.settings.namaToko = 'Warung / Kafe Baru';
+        db.settings.alamat = 'Alamat Toko Default';
+        db.settings.telepon = '0812-0000-0000';
+        db.settings.pesanFooter = 'Terima kasih telah berkunjung!';
+      }
+    }
+
+    db.activity_log.unshift({
+      Timestamp: new Date().toISOString(),
+      ID_User: String(actorId),
+      Nama_User: actor.Nama,
+      Action: isFactoryReset ? 'FACTORY_RESET_CAFE' : 'RESET_CAFE_DATA',
+      Module: 'SETTINGS',
+      Description: isFactoryReset
+        ? `Melakukan KEMBALI KE SETELAN PABRIK (Reset data & profil) untuk kafe: ${targetCafe ? targetCafe.namaToko : id}`
+        : `Mereset dan menghapus semua data transaksi untuk kafe: ${targetCafe ? targetCafe.namaToko : id}`,
     });
 
     writeDB(db);
-    res.json({ success: true, settings: db.settings });
+    res.json({
+      success: true,
+      message: isFactoryReset
+        ? `Semua data transaksi dan profil kafe berhasil dikembalikan ke setelan pabrik.`
+        : `Semua data transaksi untuk kafe ini berhasil direset.`
+    });
   });
 
   // Logs
@@ -792,10 +1152,29 @@ async function startServer() {
 
   // Transactions: Get all with details
   app.get('/api/transactions', (req, res) => {
+    const { userId } = req.query;
     const db = readDB();
+
+    // Determine the active/assigned cafe ID
+    let targetCafeId = db.settings.activeCafeId || 'cafe-maissy-coffee';
+    if (userId) {
+      const user = db.users.find((u: User) => u.ID_User === String(userId));
+      if (user && user.Role !== 'creator' && user.cafeId) {
+        targetCafeId = user.cafeId;
+      }
+    }
+
+    const filteredTransactions = db.transactions.filter((tx: any) => {
+      const txCafeId = tx.cafeId || 'cafe-maissy-coffee';
+      return txCafeId === targetCafeId;
+    });
+
+    const txIds = new Set(filteredTransactions.map((tx: any) => tx.ID_Transaksi));
+    const filteredDetails = db.transaction_details.filter((dtl: any) => txIds.has(dtl.ID_Transaksi));
+
     res.json({
-      transactions: db.transactions,
-      details: db.transaction_details,
+      transactions: filteredTransactions,
+      details: filteredDetails,
     });
   });
 
@@ -840,6 +1219,7 @@ async function startServer() {
       };
     });
 
+    const actor = db.users.find((u: User) => u.ID_User === actorId) || { Nama: cashierName || 'Kasir' };
     const newTx: Transaction = {
       ID_Transaksi: txId,
       Tanggal: new Date().toISOString(),
@@ -852,13 +1232,13 @@ async function startServer() {
       PDF_URL: `/api/receipt/${txId}/print`,
       Status: 'Paid',
       Metode_Bayar: metodeBayar || 'TUNAI',
+      cafeId: (actor as any).cafeId || db.settings?.activeCafeId || 'cafe-maissy-coffee',
     };
 
     db.transactions.unshift(newTx); // Newest first
     db.transaction_details.push(...newDetails);
 
     // Add activity log
-    const actor = db.users.find((u: User) => u.ID_User === actorId) || { Nama: cashierName || 'Kasir' };
     db.activity_log.unshift({
       Timestamp: new Date().toISOString(),
       ID_User: actorId || 'SYSTEM',
@@ -882,7 +1262,20 @@ async function startServer() {
     }
 
     const details = db.transaction_details.filter((d: TransactionDetail) => d.ID_Transaksi === id);
-    const settings = db.settings;
+    
+    let settings = { ...db.settings };
+    if (tx.cafeId) {
+      const txCafe = db.settings.cafes?.find((c: any) => c.id === tx.cafeId);
+      if (txCafe) {
+        settings = {
+          ...settings,
+          namaToko: txCafe.namaToko,
+          alamat: txCafe.alamat,
+          telepon: txCafe.telepon,
+          pesanFooter: txCafe.pesanFooter,
+        };
+      }
+    }
 
     const paperSize = req.query.paperSize || '80';
     let widthStyle = '80mm';
@@ -1046,9 +1439,25 @@ async function startServer() {
 
   // Aggregate Reporting endpoint for rich charts
   app.get('/api/reports/analytics', (req, res) => {
+    const { userId } = req.query;
     const db = readDB();
-    const transactions = db.transactions;
-    const details = db.transaction_details;
+
+    // Determine the active/assigned cafe ID
+    let targetCafeId = db.settings.activeCafeId || 'cafe-maissy-coffee';
+    if (userId) {
+      const user = db.users.find((u: User) => u.ID_User === String(userId));
+      if (user && user.Role !== 'creator' && user.cafeId) {
+        targetCafeId = user.cafeId;
+      }
+    }
+
+    const transactions = db.transactions.filter((tx: any) => {
+      const txCafeId = tx.cafeId || 'cafe-maissy-coffee';
+      return txCafeId === targetCafeId;
+    });
+
+    const txIds = new Set(transactions.map((tx: any) => tx.ID_Transaksi));
+    const details = db.transaction_details.filter((dtl: any) => txIds.has(dtl.ID_Transaksi));
 
     // Helper for date checks
     const now = new Date();

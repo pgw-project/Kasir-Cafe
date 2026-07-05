@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, UserPlus, Shield, ToggleLeft, ToggleRight, X, Mail, Check, User, Trash2, Edit } from 'lucide-react';
+import { Search, Plus, UserPlus, Shield, ToggleLeft, ToggleRight, X, Mail, Check, User, Trash2, Edit, Coffee } from 'lucide-react';
 
 interface UserViewProps {
   currentUser: any;
@@ -14,6 +14,9 @@ export default function UserView({ currentUser }: UserViewProps) {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [cafes, setCafes] = useState<any[]>([]);
+  const [selectedCafeId, setSelectedCafeId] = useState('');
+  const [editCafeId, setEditCafeId] = useState('');
 
   // Form Modal States
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -30,10 +33,25 @@ export default function UserView({ currentUser }: UserViewProps) {
   const [editPassword, setEditPassword] = useState('');
   const [editRole, setEditRole] = useState<'admin' | 'kasir'>('kasir');
 
+  // Custom Confirmation Dialog State
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void | Promise<void>;
+    type: 'danger' | 'info' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    type: 'info'
+  });
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/users');
+      const res = await fetch(`/api/users?userId=${currentUser?.ID_User}`);
       const data = await res.json();
       setUsers(data);
     } catch (err) {
@@ -43,11 +61,26 @@ export default function UserView({ currentUser }: UserViewProps) {
     }
   };
 
+  const fetchCafes = async () => {
+    try {
+      const res = await fetch('/api/cafes');
+      const data = await res.json();
+      setCafes(data);
+      if (data.length > 0) {
+        setSelectedCafeId(data[0].id);
+      }
+    } catch (err) {
+      console.error('Error fetching cafes:', err);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchCafes();
 
     const handleUpdate = () => {
       fetchUsers();
+      fetchCafes();
     };
     window.addEventListener('ws_db_update', handleUpdate);
     return () => {
@@ -74,6 +107,7 @@ export default function UserView({ currentUser }: UserViewProps) {
           role,
           status: 'active',
           actorId: currentUser.ID_User,
+          cafeId: currentUser.Role === 'admin' ? currentUser.cafeId : selectedCafeId,
         }),
       });
 
@@ -104,27 +138,34 @@ export default function UserView({ currentUser }: UserViewProps) {
       ? `Apakah Anda yakin ingin MENONAKTIFKAN akun kasir "${name}"? Kasir ini tidak akan bisa login.`
       : `Aktifkan kembali akun kasir "${name}"?`;
 
-    if (!confirm(confirmMsg)) return;
+    setConfirmDialog({
+      isOpen: true,
+      title: nextStatus === 'inactive' ? 'Nonaktifkan Kasir' : 'Aktifkan Kasir',
+      message: confirmMsg,
+      type: 'warning',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/users/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              status: nextStatus,
+              actorId: currentUser.ID_User,
+            }),
+          });
 
-    try {
-      const res = await fetch(`/api/users/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: nextStatus,
-          actorId: currentUser.ID_User,
-        }),
-      });
-
-      const result = await res.json();
-      if (result.success) {
-        fetchUsers();
-      } else {
-        alert(result.message || 'Gagal merubah status.');
+          const result = await res.json();
+          if (result.success) {
+            fetchUsers();
+          } else {
+            alert(result.message || 'Gagal merubah status.');
+          }
+        } catch (err) {
+          console.error('Error updating user status:', err);
+        }
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
       }
-    } catch (err) {
-      console.error('Error updating user status:', err);
-    }
+    });
   };
 
   const handleToggleRole = async (userId: string, currentRole: string, name: string) => {
@@ -134,25 +175,33 @@ export default function UserView({ currentUser }: UserViewProps) {
     }
 
     const nextRole = currentRole === 'admin' ? 'kasir' : 'admin';
-    if (!confirm(`Ubah peran "${name}" menjadi ${nextRole.toUpperCase()}?`)) return;
+    
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Ubah Hak Akses',
+      message: `Ubah peran "${name}" menjadi ${nextRole.toUpperCase()}?`,
+      type: 'info',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/users/${userId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              role: nextRole,
+              actorId: currentUser.ID_User,
+            }),
+          });
 
-    try {
-      const res = await fetch(`/api/users/${userId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          role: nextRole,
-          actorId: currentUser.ID_User,
-        }),
-      });
-
-      const result = await res.json();
-      if (result.success) {
-        fetchUsers();
+          const result = await res.json();
+          if (result.success) {
+            fetchUsers();
+          }
+        } catch (err) {
+          console.error('Error toggling user role:', err);
+        }
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
       }
-    } catch (err) {
-      console.error('Error toggling user role:', err);
-    }
+    });
   };
 
   const handleOpenEditModal = (user: any) => {
@@ -161,6 +210,7 @@ export default function UserView({ currentUser }: UserViewProps) {
     setEditEmail(user.Email);
     setEditPassword('');
     setEditRole(user.Role);
+    setEditCafeId(user.cafeId || '');
     setIsEditOpen(true);
   };
 
@@ -178,6 +228,7 @@ export default function UserView({ currentUser }: UserViewProps) {
         email: editEmail,
         role: editRole,
         actorId: currentUser.ID_User,
+        cafeId: editCafeId,
       };
       if (editPassword.trim()) {
         body.password = editPassword;
@@ -207,30 +258,43 @@ export default function UserView({ currentUser }: UserViewProps) {
       return;
     }
 
-    if (!confirm(`Apakah Anda yakin ingin MENGHAPUS akun "${name}" secara permanen? Tindakan ini tidak dapat dibatalkan.`)) {
-      return;
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Hapus Akun Kasir',
+      message: `Apakah Anda yakin ingin MENGHAPUS akun "${name}" secara permanen? Tindakan ini tidak dapat dibatalkan.`,
+      type: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`/api/users/${userId}?actorId=${currentUser.ID_User}`, {
+            method: 'DELETE',
+          });
 
-    try {
-      const res = await fetch(`/api/users/${userId}?actorId=${currentUser.ID_User}`, {
-        method: 'DELETE',
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        fetchUsers();
-      } else {
-        alert(data.message || 'Gagal menghapus pengguna.');
+          const data = await res.json();
+          if (data.success) {
+            fetchUsers();
+          } else {
+            alert(data.message || 'Gagal menghapus pengguna.');
+          }
+        } catch (err) {
+          console.error('Error deleting user:', err);
+        }
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
       }
-    } catch (err) {
-      console.error('Error deleting user:', err);
-    }
+    });
   };
 
-  const filteredUsers = users.filter((u) => 
-    u.Nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.Email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = users.filter((u) => {
+    const matchesSearch = u.Nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          u.Email.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Admin (owner cafe) only sees users of their own cafe and cannot see/manage other admins or creators
+    if (currentUser.Role === 'admin') {
+      return matchesSearch && u.cafeId === currentUser.cafeId && u.Role !== 'admin' && u.Role !== 'creator';
+    }
+    
+    // Creator can see everything
+    return matchesSearch;
+  });
 
   return (
     <div id="users-management-container" className="space-y-6">
@@ -246,10 +310,15 @@ export default function UserView({ currentUser }: UserViewProps) {
           </p>
         </div>
 
-        {currentUser.Role === 'admin' && (
+        {(currentUser.Role === 'admin' || currentUser.Role === 'creator') && (
           <button
             id="open-add-user-btn"
-            onClick={() => setIsFormOpen(true)}
+            onClick={() => {
+              if (currentUser.Role === 'admin') {
+                setSelectedCafeId(currentUser.cafeId || '');
+              }
+              setIsFormOpen(true);
+            }}
             className="py-2.5 px-4 rounded-xl bg-amber-600 text-white font-bold text-xs flex items-center justify-center gap-2 hover:bg-amber-700 transition cursor-pointer shadow-lg shadow-amber-600/10"
           >
             <UserPlus className="h-4.5 w-4.5" />
@@ -293,7 +362,7 @@ export default function UserView({ currentUser }: UserViewProps) {
                 <th className="px-6 py-4">Hak Akses Role</th>
                 <th className="px-6 py-4">Status Akun</th>
                 <th className="px-6 py-4">Tanggal Gabung</th>
-                {currentUser.Role === 'admin' && <th className="px-6 py-4 text-right">Tindakan Admin</th>}
+                {(currentUser.Role === 'admin' || currentUser.Role === 'creator') && <th className="px-6 py-4 text-right">Tindakan Admin</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/60 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
@@ -307,7 +376,13 @@ export default function UserView({ currentUser }: UserViewProps) {
                       </div>
                       <div>
                         <span className="font-bold text-zinc-900 dark:text-zinc-100 block">{u.Nama}</span>
-                        <span className="text-[10px] text-amber-600 font-mono font-bold uppercase">{u.ID_User}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5 text-[10px] font-bold">
+                          <span className="text-amber-600 font-mono uppercase">{u.ID_User}</span>
+                          <span className="text-zinc-400">•</span>
+                          <span className="text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded max-w-[130px] truncate" title={cafes.find(c => c.id === u.cafeId)?.namaToko || 'Default Outlet'}>
+                            {cafes.find(c => c.id === u.cafeId)?.namaToko || 'Default Outlet'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -319,13 +394,15 @@ export default function UserView({ currentUser }: UserViewProps) {
                   <td className="px-6 py-4">
                     <button
                       id={`toggle-role-${u.ID_User}`}
-                      onClick={() => currentUser.Role === 'admin' && handleToggleRole(u.ID_User, u.Role, u.Nama)}
-                      disabled={currentUser.Role !== 'admin' || u.ID_User === currentUser.ID_User}
+                      onClick={() => (currentUser.Role === 'admin' || currentUser.Role === 'creator') && handleToggleRole(u.ID_User, u.Role, u.Nama)}
+                      disabled={(currentUser.Role !== 'admin' && currentUser.Role !== 'creator') || u.ID_User === currentUser.ID_User}
                       className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 transition
-                        ${u.Role === 'admin' 
-                          ? 'bg-amber-600 text-white shadow-md shadow-amber-600/10' 
-                          : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'}
-                        ${currentUser.Role === 'admin' && u.ID_User !== currentUser.ID_User ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+                        ${u.Role === 'creator'
+                          ? 'bg-purple-600 text-white shadow-md shadow-purple-600/10'
+                          : u.Role === 'admin' 
+                            ? 'bg-amber-600 text-white shadow-md shadow-amber-600/10' 
+                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400'}
+                        ${(currentUser.Role === 'admin' || currentUser.Role === 'creator') && u.ID_User !== currentUser.ID_User ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
                     >
                       <Shield className="h-3 w-3" />
                       {u.Role}
@@ -348,7 +425,7 @@ export default function UserView({ currentUser }: UserViewProps) {
                   </td>
 
                   {/* Admin toggles */}
-                  {currentUser.Role === 'admin' && (
+                  {(currentUser.Role === 'admin' || currentUser.Role === 'creator') && (
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {u.ID_User !== currentUser.ID_User ? (
@@ -476,9 +553,7 @@ export default function UserView({ currentUser }: UserViewProps) {
                   className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
                   required
                 />
-              </div>
-
-              {/* Peran / Hak Akses */}
+              </div>               {/* Peran / Hak Akses */}
               <div className="space-y-1.5">
                 <label htmlFor="user-role-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
                   Peran & Hak Akses <span className="text-rose-500">*</span>
@@ -488,11 +563,49 @@ export default function UserView({ currentUser }: UserViewProps) {
                   value={role}
                   onChange={(e: any) => setRole(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
+                  disabled={currentUser.Role === 'admin'}
                 >
                   <option value="kasir">User (Kasir)</option>
-                  <option value="admin">Admin (Owner/Manager)</option>
+                  {currentUser.Role === 'creator' && (
+                    <>
+                      <option value="admin">Admin (Owner/Manager)</option>
+                      <option value="creator">Pembuat Aplikasi (Creator)</option>
+                    </>
+                  )}
                 </select>
               </div>
+
+              {/* Outlet Cafe / Warung */}
+              {role !== 'creator' && (
+                <div className="space-y-1.5">
+                  <label htmlFor="user-cafe-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                    <Coffee className="h-3.5 w-3.5" /> Outlet Cafe / Warung <span className="text-rose-500">*</span>
+                  </label>
+                  {currentUser.Role === 'admin' ? (
+                    <input
+                      type="text"
+                      value={cafes.find((c) => c.id === currentUser.cafeId)?.namaToko || 'Outlet Anda'}
+                      disabled
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-[#1a1613]/50 text-zinc-500 dark:text-zinc-400 text-xs font-bold cursor-not-allowed"
+                    />
+                  ) : (
+                    <select
+                      id="user-cafe-field"
+                      value={selectedCafeId}
+                      onChange={(e) => setSelectedCafeId(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
+                      required
+                    >
+                      {cafes.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.namaToko}
+                        </option>
+                      ))}
+                      {cafes.length === 0 && <option value="cafe-maissy-coffee">Default Cafe (Maissy Coffee)</option>}
+                    </select>
+                  )}
+                </div>
+              )}
 
               {/* Submit Action */}
               <div className="pt-2 flex justify-end gap-3 font-semibold">
@@ -584,9 +697,7 @@ export default function UserView({ currentUser }: UserViewProps) {
                   onChange={(e) => setEditPassword(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
                 />
-              </div>
-
-              {/* Peran / Hak Akses */}
+              </div>               {/* Peran / Hak Akses */}
               <div className="space-y-1.5">
                 <label htmlFor="edit-user-role-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
                   Peran & Hak Akses <span className="text-rose-500">*</span>
@@ -596,11 +707,49 @@ export default function UserView({ currentUser }: UserViewProps) {
                   value={editRole}
                   onChange={(e: any) => setEditRole(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
+                  disabled={currentUser.Role === 'admin'}
                 >
                   <option value="kasir">User (Kasir)</option>
-                  <option value="admin">Admin (Owner/Manager)</option>
+                  {currentUser.Role === 'creator' && (
+                    <>
+                      <option value="admin">Admin (Owner/Manager)</option>
+                      <option value="creator">Pembuat Aplikasi (Creator)</option>
+                    </>
+                  )}
                 </select>
               </div>
+
+              {/* Outlet Cafe / Warung */}
+              {editRole !== 'creator' && (
+                <div className="space-y-1.5">
+                  <label htmlFor="edit-user-cafe-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                    <Coffee className="h-3.5 w-3.5" /> Outlet Cafe / Warung <span className="text-rose-500">*</span>
+                  </label>
+                  {currentUser.Role === 'admin' ? (
+                    <input
+                      type="text"
+                      value={cafes.find((c) => c.id === currentUser.cafeId)?.namaToko || 'Outlet Anda'}
+                      disabled
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-[#1a1613]/50 text-zinc-500 dark:text-zinc-400 text-xs font-bold cursor-not-allowed"
+                    />
+                  ) : (
+                    <select
+                      id="edit-user-cafe-field"
+                      value={editCafeId}
+                      onChange={(e) => setEditCafeId(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
+                      required
+                    >
+                      {cafes.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.namaToko}
+                        </option>
+                      ))}
+                      {cafes.length === 0 && <option value="cafe-maissy-coffee">Default Cafe (Maissy Coffee)</option>}
+                    </select>
+                  )}
+                </div>
+              )}
 
               {/* Submit Action */}
               <div className="pt-2 flex justify-end gap-3 font-semibold">
@@ -622,6 +771,56 @@ export default function UserView({ currentUser }: UserViewProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* --- REUSABLE CONFIRMATION DIALOG --- */}
+      {confirmDialog.isOpen && (
+        <div id="reusable-confirm-dialog" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[60]">
+          <div className="w-full max-w-sm bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 relative animate-in fade-in zoom-in-95 duration-150">
+            <button
+              onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-500 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex flex-col items-center text-center mt-2">
+              <div className={`h-12 w-12 rounded-full flex items-center justify-center mb-4 
+                ${confirmDialog.type === 'danger' ? 'bg-rose-500/10 text-rose-600' :
+                  confirmDialog.type === 'warning' ? 'bg-amber-500/10 text-amber-600' :
+                  'bg-sky-500/10 text-sky-600'}`}
+              >
+                <Shield className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-base">
+                {confirmDialog.title}
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">
+                {confirmDialog.message}
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition text-center"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmDialog.onConfirm}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-white font-bold text-xs cursor-pointer transition text-center shadow-lg
+                  ${confirmDialog.type === 'danger' ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/10' :
+                    confirmDialog.type === 'warning' ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/10' :
+                    'bg-sky-600 hover:bg-sky-700 shadow-sky-600/10'}`}
+              >
+                Konfirmasi
+              </button>
+            </div>
           </div>
         </div>
       )}

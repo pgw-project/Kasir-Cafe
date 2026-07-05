@@ -71,7 +71,7 @@ export default function ReportView({ currentUser }: ReportViewProps) {
 
   const handlePrintBluetooth = async (paperSize: '58' | '80') => {
     try {
-      const settingsRes = await fetch(`/api/settings`);
+      const settingsRes = await fetch(`/api/settings?userId=${currentUser.ID_User}`);
       const settings = await settingsRes.json();
       
       const tx = transactions.find((t: any) => t.ID_Transaksi === printTxId);
@@ -146,7 +146,7 @@ export default function ReportView({ currentUser }: ReportViewProps) {
     try {
       setLoading(true);
       const [transRes, menusRes] = await Promise.all([
-        fetch('/api/transactions'),
+        fetch(`/api/transactions?userId=${currentUser?.ID_User}`),
         fetch('/api/menus')
       ]);
       const transData = await transRes.json();
@@ -272,6 +272,7 @@ export default function ReportView({ currentUser }: ReportViewProps) {
         'Makanan Terjual': counts.makanan,
         'Minuman Terjual': counts.minuman,
         'Total Harga (IDR)': tx.Total_Harga,
+        'Metode Pembayaran': tx.Metode_Bayar || 'TUNAI',
         'Status': tx.Status
       };
     });
@@ -476,6 +477,7 @@ export default function ReportView({ currentUser }: ReportViewProps) {
                   <th className="px-6 py-4">Makanan Terjual</th>
                   <th className="px-6 py-4">Minuman Terjual</th>
                   <th className="px-6 py-4">Total Bayar</th>
+                  <th className="px-6 py-4">Metode Bayar</th>
                   <th className="px-6 py-4 text-right">Tindakan</th>
                 </tr>
               </thead>
@@ -495,6 +497,15 @@ export default function ReportView({ currentUser }: ReportViewProps) {
                       <td className="px-6 py-4 font-mono text-sky-600 dark:text-sky-500 font-bold">{counts.minuman} pcs</td>
                       <td className="px-6 py-4 font-mono text-zinc-950 dark:text-zinc-50 font-bold">
                         Rp {tx.Total_Harga.toLocaleString('id-ID')}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-1 rounded-md text-[10px] font-bold ${
+                          tx.Metode_Bayar === 'QRIS' 
+                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20' 
+                            : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                        }`}>
+                          {tx.Metode_Bayar || 'TUNAI'}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button

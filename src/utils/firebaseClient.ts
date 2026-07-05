@@ -57,6 +57,53 @@ const getLocalDb = () => {
     } catch (e) {
       console.error('[Local DB] Error seeding localStorage:', e);
     }
+  } else {
+    // Retrofitting check: Ensure cafes list and creator user are present in existing localStorage
+    try {
+      const settingsRaw = localStorage.getItem('pos_settings');
+      if (settingsRaw) {
+        const settings = JSON.parse(settingsRaw);
+        if (!settings.cafes || settings.cafes.length === 0) {
+          console.log('[Local DB] Retrofitting cafes in localStorage settings...');
+          settings.cafes = dbData.settings?.cafes || [
+            {
+              id: 'cafe-maissy-coffee',
+              namaToko: settings.namaToko || 'Kafe Maissy Coffee',
+              alamat: settings.alamat || 'Jl. Melati No. 45, Kebayoran Baru, Jakarta Selatan',
+              telepon: settings.telepon || '0812-3456-7890',
+              pesanFooter: settings.pesanFooter || 'Terima kasih telah berkunjung ke Maissy Coffee!',
+              Created_At: new Date().toISOString()
+            }
+          ];
+          if (!settings.activeCafeId) {
+            settings.activeCafeId = 'cafe-maissy-coffee';
+          }
+          localStorage.setItem('pos_settings', JSON.stringify(settings));
+        }
+      }
+
+      const usersRaw = localStorage.getItem('pos_users');
+      if (usersRaw) {
+        const users = JSON.parse(usersRaw);
+        const creatorEmail = 'asriantofistek015@gmail.com';
+        const creatorExists = users.some((u: any) => u.Email && u.Email.toLowerCase() === creatorEmail.toLowerCase());
+        if (!creatorExists) {
+          console.log('[Local DB] Retrofitting creator user in localStorage users...');
+          users.unshift({
+            ID_User: 'USR-000',
+            Nama: 'Asrianto (Creator)',
+            Email: creatorEmail,
+            Role: 'creator',
+            Status: 'active',
+            Password: 'admin123',
+            Created_At: new Date().toISOString()
+          });
+          localStorage.setItem('pos_users', JSON.stringify(users));
+        }
+      }
+    } catch (e) {
+      console.error('[Local DB] Error retrofitting localStorage:', e);
+    }
   }
 
   return {
@@ -90,8 +137,8 @@ ensureSeeded().catch(err => console.error('Error ensuring seeded:', err));
 // Replicates Express API logic using localStorage fallback
 export const clientFirebaseRouter = {
   handleRequest: async (path: string, method: string, body: any): Promise<any> => {
-    // Clean paths like `/api/users/123` to route parameters
-    const cleanPath = path.replace(/^\/api/, '');
+    // Clean paths like `/api/users/123` to route parameters and strip query strings
+    const cleanPath = path.replace(/^\/api/, '').split('?')[0];
 
     // 1. Auth: Login
     if (cleanPath === '/auth/login' && method === 'POST') {
@@ -248,10 +295,10 @@ export const clientFirebaseRouter = {
       return { ok: true, status: 200, data: { success: true } };
     }
 
-    // 6. CRUD: Settings
+    // 6. CRUD: Settings & Cafes Fallback Router
     if (cleanPath === '/settings' && method === 'GET') {
       const ldb = getLocalDb();
-      let settings = ldb.get('settings');
+      let settings = ldb.get('settings') || {};
       if (!settings || !settings.namaToko) {
         settings = {
           namaToko: 'Kafe Maissy Coffee',
@@ -260,16 +307,361 @@ export const clientFirebaseRouter = {
           pesanFooter: 'Terima kasih telah berkunjung ke Maissy Coffee!',
           googleSpreadsheetId: '1SHeYy5Vb1OaC9R_gTqC0y1-N4VzMaissySpreadsheetID',
           googleDriveFolderId: '1nXzPzQ2lqqaATvNybfTqcYU9lHc2DuG5',
-          autoSync: true
+          autoSync: true,
+          cafes: [
+            {
+              id: 'cafe-maissy-coffee',
+              namaToko: 'Kafe Maissy Coffee',
+              alamat: 'Jl. Melati No. 45, Kebayoran Baru, Jakarta Selatan',
+              telepon: '0812-3456-7890',
+              pesanFooter: 'Terima kasih telah berkunjung ke Maissy Coffee!',
+              Created_At: new Date().toISOString()
+            }
+          ],
+          activeCafeId: 'cafe-maissy-coffee'
         };
         ldb.set('settings', settings);
       }
-      return { ok: true, status: 200, data: { success: true, settings } };
+
+      // Ensure cafes exists inside settings fallback
+      if (!settings.cafes || settings.cafes.length === 0) {
+        settings.cafes = [
+          {
+            id: 'cafe-maissy-coffee',
+            namaToko: settings.namaToko || 'Kafe Maissy Coffee',
+            alamat: settings.alamat || 'Jl. Melati No. 45, Kebayoran Baru, Jakarta Selatan',
+            telepon: settings.telepon || '0812-3456-7890',
+            pesanFooter: settings.pesanFooter || 'Terima kasih telah berkunjung ke Maissy Coffee!',
+            Created_At: new Date().toISOString()
+          }
+        ];
+        settings.activeCafeId = 'cafe-maissy-coffee';
+        ldb.set('settings', settings);
+      }
+
+      let settingsResponse = { ...settings };
+
+      // Apply cafe override if requester is not a creator and is assigned to a specific cafe
+      try {
+        const urlObj = new URL(path, 'http://localhost');
+        const userId = urlObj.searchParams.get('userId');
+        if (userId) {
+          const users = ldb.get('users') || [];
+          const user = users.find((u: any) => u.ID_User === userId);
+          if (user && user.Role !== 'creator' && user.cafeId) {
+            const userCafe = settings.cafes?.find((c: any) => c.id === user.cafeId);
+            if (userCafe) {
+              settingsResponse = {
+                ...settingsResponse,
+                namaToko: userCafe.namaToko,
+                alamat: userCafe.alamat,
+                telepon: userCafe.telepon,
+                pesanFooter: userCafe.pesanFooter,
+                logoUrl: userCafe.logoUrl,
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error parsing userId in client settings GET:', err);
+      }
+
+      return { ok: true, status: 200, data: settingsResponse };
     }
+
     if (cleanPath === '/settings' && method === 'PUT') {
       const ldb = getLocalDb();
-      ldb.set('settings', body);
-      return { ok: true, status: 200, data: { success: true, settings: body } };
+      const settings = ldb.get('settings') || {};
+      const users = ldb.get('users') || [];
+      const { namaToko, alamat, telepon, pesanFooter, googleSpreadsheetId, googleDriveFolderId, autoSync, logoUrl, actorId } = body;
+
+      const actor = users.find((u: any) => u.ID_User === actorId);
+
+      if (actor && actor.Role !== 'creator' && actor.cafeId) {
+        if (!settings.cafes) {
+          settings.cafes = [];
+        }
+        const cafeIndex = settings.cafes.findIndex((c: any) => c.id === actor.cafeId);
+        if (cafeIndex !== -1) {
+          settings.cafes[cafeIndex] = {
+            ...settings.cafes[cafeIndex],
+            namaToko: namaToko || settings.cafes[cafeIndex].namaToko,
+            alamat: alamat || settings.cafes[cafeIndex].alamat,
+            telepon: telepon || settings.cafes[cafeIndex].telepon,
+            pesanFooter: pesanFooter || settings.cafes[cafeIndex].pesanFooter,
+            logoUrl: logoUrl !== undefined ? logoUrl : settings.cafes[cafeIndex].logoUrl,
+          };
+        }
+      } else {
+        // Creator updating global settings
+        settings.namaToko = namaToko !== undefined ? namaToko : settings.namaToko;
+        settings.alamat = alamat !== undefined ? alamat : settings.alamat;
+        settings.telepon = telepon !== undefined ? telepon : settings.telepon;
+        settings.pesanFooter = pesanFooter !== undefined ? pesanFooter : settings.pesanFooter;
+        settings.googleSpreadsheetId = googleSpreadsheetId !== undefined ? googleSpreadsheetId : settings.googleSpreadsheetId;
+        settings.googleDriveFolderId = googleDriveFolderId !== undefined ? googleDriveFolderId : settings.googleDriveFolderId;
+        settings.autoSync = autoSync !== undefined ? autoSync : settings.autoSync;
+        settings.logoUrl = logoUrl !== undefined ? logoUrl : settings.logoUrl;
+
+        // Sync with active cafe entry
+        if (settings.cafes && settings.activeCafeId) {
+          const cafeIndex = settings.cafes.findIndex((c: any) => c.id === settings.activeCafeId);
+          if (cafeIndex !== -1) {
+            settings.cafes[cafeIndex] = {
+              ...settings.cafes[cafeIndex],
+              namaToko: settings.namaToko,
+              alamat: settings.alamat,
+              telepon: settings.telepon,
+              pesanFooter: settings.pesanFooter,
+              logoUrl: settings.logoUrl,
+            };
+          }
+        }
+      }
+
+      ldb.set('settings', settings);
+      return { ok: true, status: 200, data: settings };
+    }
+
+    if (cleanPath === '/cafes' && method === 'GET') {
+      const ldb = getLocalDb();
+      const settings = ldb.get('settings') || {};
+      return { ok: true, status: 200, data: settings.cafes || [] };
+    }
+
+    if (cleanPath === '/cafes' && method === 'POST') {
+      const ldb = getLocalDb();
+      const settings = ldb.get('settings') || {};
+      const users = ldb.get('users') || [];
+      const { id, namaToko, alamat, telepon, pesanFooter, email, password, actorId } = body;
+
+      const actor = users.find((u: any) => u.ID_User === actorId);
+      if (!actor || actor.Role !== 'creator') {
+        return { ok: false, status: 403, data: { success: false, message: 'Hanya pembuat aplikasi (Creator) yang dapat mendaftarkan kafe/warung baru.' } };
+      }
+
+      if (!id || !namaToko) {
+        return { ok: false, status: 400, data: { success: false, message: 'ID dan Nama Kafe wajib diisi.' } };
+      }
+
+      if (!settings.cafes) {
+        settings.cafes = [];
+      }
+
+      const normalizedId = id.toLowerCase().replace(/\s+/g, '-');
+      if (settings.cafes.some((c: any) => c.id === normalizedId)) {
+        return { ok: false, status: 400, data: { success: false, message: 'ID Kafe sudah terdaftar.' } };
+      }
+
+      const newCafe = {
+        id: normalizedId,
+        namaToko,
+        alamat: alamat || '',
+        telepon: telepon || '',
+        pesanFooter: pesanFooter || 'Terima kasih telah berkunjung!',
+        Created_At: new Date().toISOString()
+      };
+
+      settings.cafes.push(newCafe);
+
+      if (settings.cafes.length === 1 || !settings.activeCafeId) {
+        settings.activeCafeId = normalizedId;
+        settings.namaToko = namaToko;
+        settings.alamat = alamat || '';
+        settings.telepon = telepon || '';
+        settings.pesanFooter = pesanFooter || 'Terima kasih telah berkunjung!';
+      }
+
+      if (email) {
+        const newAdminUser: User = {
+          ID_User: `usr_admin_${Date.now()}`,
+          Nama: `Admin ${namaToko}`,
+          Email: email,
+          Role: 'admin',
+          Status: 'active',
+          Password: password || '123456',
+          Created_At: new Date().toISOString(),
+          cafeId: normalizedId,
+        };
+        users.push(newAdminUser);
+        ldb.set('users', users);
+      }
+
+      ldb.set('settings', settings);
+
+      const logs = ldb.get('activity_log') || [];
+      logs.unshift({
+        Timestamp: new Date().toISOString(),
+        ID_User: actorId,
+        Nama_User: actor.Nama,
+        Action: 'REGISTER_CAFE',
+        Module: 'SETTINGS',
+        Description: `Mendaftarkan kafe/warung baru: ${namaToko} (ID: ${normalizedId}) (client-side fallback)`,
+      });
+      ldb.set('activity_log', logs);
+
+      return { ok: true, status: 200, data: { success: true, cafe: newCafe, cafes: settings.cafes } };
+    }
+
+    if (cleanPath === '/cafes/active' && method === 'PUT') {
+      const ldb = getLocalDb();
+      const settings = ldb.get('settings') || {};
+      const users = ldb.get('users') || [];
+      const { id, actorId } = body;
+
+      const actor = users.find((u: any) => u.ID_User === actorId);
+      if (!actor || actor.Role !== 'creator') {
+        return { ok: false, status: 403, data: { success: false, message: 'Hanya pembuat aplikasi (Creator) yang dapat merubah kafe aktif.' } };
+      }
+
+      if (!settings.cafes) {
+        settings.cafes = [];
+      }
+
+      const targetCafe = settings.cafes.find((c: any) => c.id === id);
+      if (!targetCafe) {
+        return { ok: false, status: 404, data: { success: false, message: 'Kafe tidak ditemukan.' } };
+      }
+
+      settings.activeCafeId = id;
+      settings.namaToko = targetCafe.namaToko;
+      settings.alamat = targetCafe.alamat;
+      settings.telepon = targetCafe.telepon;
+      settings.pesanFooter = targetCafe.pesanFooter;
+
+      ldb.set('settings', settings);
+
+      const logs = ldb.get('activity_log') || [];
+      logs.unshift({
+        Timestamp: new Date().toISOString(),
+        ID_User: actorId,
+        Nama_User: actor.Nama,
+        Action: 'SWITCH_ACTIVE_CAFE',
+        Module: 'SETTINGS',
+        Description: `Mengubah kafe aktif menjadi: ${targetCafe.namaToko} (ID: ${id}) (client-side fallback)`,
+      });
+      ldb.set('activity_log', logs);
+
+      return { ok: true, status: 200, data: { success: true, activeCafeId: id, settings } };
+    }
+
+    if (cleanPath.startsWith('/cafes/') && !cleanPath.endsWith('/reset') && method === 'DELETE') {
+      const parts = cleanPath.split('/');
+      const id = parts[2];
+      const ldb = getLocalDb();
+      const settings = ldb.get('settings') || {};
+      const users = ldb.get('users') || [];
+
+      let actorId = '';
+      try {
+        const urlObj = new URL(path, 'http://localhost');
+        actorId = urlObj.searchParams.get('actorId') || '';
+      } catch (e) {}
+
+      const actor = users.find((u: any) => u.ID_User === actorId);
+      if (!actor || actor.Role !== 'creator') {
+        return { ok: false, status: 403, data: { success: false, message: 'Hanya pembuat aplikasi (Creator) yang dapat menghapus kafe.' } };
+      }
+
+      if (!settings.cafes) {
+        settings.cafes = [];
+      }
+
+      const cafeIndex = settings.cafes.findIndex((c: any) => c.id === id);
+      if (cafeIndex === -1) {
+        return { ok: false, status: 404, data: { success: false, message: 'Kafe tidak ditemukan.' } };
+      }
+
+      const targetCafe = settings.cafes[cafeIndex];
+      if (settings.activeCafeId === id) {
+        return { ok: false, status: 400, data: { success: false, message: 'Anda tidak dapat menghapus kafe yang sedang aktif!' } };
+      }
+
+      settings.cafes.splice(cafeIndex, 1);
+      ldb.set('settings', settings);
+
+      const logs = ldb.get('activity_log') || [];
+      logs.unshift({
+        Timestamp: new Date().toISOString(),
+        ID_User: actorId,
+        Nama_User: actor.Nama,
+        Action: 'DELETE_CAFE',
+        Module: 'SETTINGS',
+        Description: `Menghapus kafe/warung: ${targetCafe.namaToko} (ID: ${id}) (client-side fallback)`,
+      });
+      ldb.set('activity_log', logs);
+
+      return { ok: true, status: 200, data: { success: true, message: `Kafe ${targetCafe.namaToko} berhasil dihapus.`, cafes: settings.cafes } };
+    }
+
+    if (cleanPath.startsWith('/cafes/') && cleanPath.endsWith('/reset') && method === 'POST') {
+      const parts = cleanPath.split('/');
+      const id = parts[2];
+      const ldb = getLocalDb();
+      const settings = ldb.get('settings') || {};
+      const transactions = ldb.get('transactions') || [];
+      const details = ldb.get('transaction_details') || [];
+      const users = ldb.get('users') || [];
+      const { mode, actorId } = body;
+
+      const actor = users.find((u: any) => u.ID_User === actorId);
+
+      const targetCafe = settings.cafes?.find((c: any) => c.id === id);
+      if (!targetCafe && id !== 'default' && id !== settings.activeCafeId) {
+        return { ok: false, status: 404, data: { success: false, message: 'Outlet kafe tidak ditemukan.' } };
+      }
+
+      const remainingTx = transactions.filter((tx: any) => {
+        const txCafeId = tx.cafeId || 'cafe-maissy-coffee';
+        return txCafeId !== id;
+      });
+
+      const remainingTxIds = new Set(remainingTx.map((tx: any) => tx.ID_Transaksi));
+      const remainingDetails = details.filter((det: any) => remainingTxIds.has(det.ID_Transaksi));
+
+      ldb.set('transactions', remainingTx);
+      ldb.set('transaction_details', remainingDetails);
+
+      const isFactoryReset = mode === 'factory_reset';
+      if (isFactoryReset) {
+        if (targetCafe) {
+          targetCafe.namaToko = 'Warung / Kafe Baru';
+          targetCafe.alamat = 'Alamat Toko Default';
+          targetCafe.telepon = '0812-0000-0000';
+          targetCafe.pesanFooter = 'Terima kasih telah berkunjung!';
+        }
+        if (settings.activeCafeId === id) {
+          settings.namaToko = 'Warung / Kafe Baru';
+          settings.alamat = 'Alamat Toko Default';
+          settings.telepon = '0812-0000-0000';
+          settings.pesanFooter = 'Terima kasih telah berkunjung!';
+        }
+        ldb.set('settings', settings);
+      }
+
+      const logs = ldb.get('activity_log') || [];
+      logs.unshift({
+        Timestamp: new Date().toISOString(),
+        ID_User: actorId || 'SYSTEM',
+        Nama_User: actor ? actor.Nama : 'System',
+        Action: isFactoryReset ? 'FACTORY_RESET_CAFE' : 'RESET_CAFE_DATA',
+        Module: 'SETTINGS',
+        Description: isFactoryReset
+          ? `Melakukan KEMBALI KE SETELAN PABRIK untuk kafe: ${targetCafe ? targetCafe.namaToko : id} (client-side fallback)`
+          : `Mereset dan menghapus semua data transaksi untuk kafe: ${targetCafe ? targetCafe.namaToko : id} (client-side fallback)`,
+      });
+      ldb.set('activity_log', logs);
+
+      return {
+        ok: true,
+        status: 200,
+        data: {
+          success: true,
+          message: isFactoryReset
+            ? `Setelan pabrik untuk outlet berhasil dilakukan.`
+            : `Semua data transaksi untuk outlet berhasil direset/dikosongkan.`
+        }
+      };
     }
 
     // 7. Activity Logs
@@ -288,25 +680,96 @@ export const clientFirebaseRouter = {
       return { ok: true, status: 200, data: list };
     }
     if (cleanPath === '/transactions' && method === 'POST') {
-      const { transaction, details } = body;
       const ldb = getLocalDb();
-      
-      const transactions = ldb.get('transactions');
-      const transaction_details = ldb.get('transaction_details');
+      const transactions = ldb.get('transactions') || [];
+      const transaction_details = ldb.get('transaction_details') || [];
 
-      const txId = transaction.ID_Transaksi || `tx_${Date.now()}`;
-      const finalTx = { ...transaction, ID_Transaksi: txId };
-      transactions.push(finalTx);
+      let finalTx: any;
+      let finalDetails: any[] = [];
+
+      // Handle the new format sent from POSView:
+      // { namaPelanggan, items, bayar, kembali, cashierName, actorId, metodeBayar }
+      if (body && body.items && Array.isArray(body.items)) {
+        const { namaPelanggan, items, bayar, kembali, cashierName, actorId, metodeBayar } = body;
+
+        // Generate Transaction ID (TRX-XXXXX)
+        const nextTxNum = transactions.length > 0
+          ? Math.max(...transactions.map((t: any) => {
+              if (!t.ID_Transaksi) return 0;
+              const parts = t.ID_Transaksi.split('-');
+              return parts.length > 1 ? (parseInt(parts[1]) || 0) : 0;
+            })) + 1
+          : 1;
+        const txId = `TRX-${String(nextTxNum).padStart(5, '0')}`;
+
+        let totalItem = 0;
+        let totalHarga = 0;
+
+        finalDetails = items.map((item: any, idx: number) => {
+          const subtotal = item.Harga * item.qty;
+          totalItem += item.qty;
+          totalHarga += subtotal;
+
+          const dtlId = `DTL-${String(transaction_details.length + 1 + idx).padStart(6, '0')}`;
+
+          return {
+            ID_Detail: dtlId,
+            ID_Transaksi: txId,
+            ID_Menu: item.ID_Menu,
+            Nama_Menu: item.Nama_Menu,
+            Qty: item.qty,
+            Harga_Satuan: item.Harga,
+            Subtotal: subtotal,
+          };
+        });
+
+        finalTx = {
+          ID_Transaksi: txId,
+          Tanggal: new Date().toISOString(),
+          Nama_Pelanggan: namaPelanggan,
+          Total_Item: totalItem,
+          Total_Harga: totalHarga,
+          Bayar: Number(bayar),
+          Kembali: Number(kembali),
+          Kasir: cashierName || 'Kasir Maissy',
+          PDF_URL: `/api/receipt/${txId}/print`,
+          Status: 'Paid',
+          Metode_Bayar: metodeBayar || 'TUNAI',
+        };
+
+        // Add log
+        const users = ldb.get('users') || [];
+        const actor = users.find((u: any) => u.ID_User === actorId) || { Nama: cashierName || 'Kasir' };
+        const logs = ldb.get('activity_log') || [];
+        logs.unshift({
+          Timestamp: new Date().toISOString(),
+          ID_User: actorId || 'SYSTEM',
+          Nama_User: actor.Nama,
+          Action: 'CHECKOUT',
+          Module: 'POS',
+          Description: `Transaksi ${txId} berhasil dibuat untuk Pelanggan: ${namaPelanggan}. Total: Rp ${totalHarga.toLocaleString('id-ID')} (client-side local db)`,
+        });
+        ldb.set('activity_log', logs);
+
+      } else {
+        // Fallback to legacy format: { transaction, details }
+        const { transaction, details } = body || {};
+        const txId = transaction?.ID_Transaksi || `tx_${Date.now()}`;
+        finalTx = { ...transaction, ID_Transaksi: txId };
+        
+        finalDetails = (details || []).map((det: any, idx: number) => {
+          const detId = det.ID_Detail || `det_${Date.now()}_${idx}`;
+          return { ...det, ID_Transaksi: txId, ID_Detail: detId };
+        });
+      }
+
+      transactions.unshift(finalTx);
       ldb.set('transactions', transactions);
 
-      for (const det of details) {
-        const detId = det.ID_Detail || `det_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        const finalDet = { ...det, ID_Transaksi: txId, ID_Detail: detId };
-        transaction_details.push(finalDet);
-      }
+      transaction_details.push(...finalDetails);
       ldb.set('transaction_details', transaction_details);
 
-      return { ok: true, status: 200, data: { success: true, transaction: finalTx } };
+      return { ok: true, status: 200, data: { success: true, transaction: finalTx, details: finalDetails } };
     }
 
     // 9. Analytics report

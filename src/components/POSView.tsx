@@ -29,6 +29,9 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('Semua');
   
+  // Mobile active tab state (Katalog vs Keranjang)
+  const [activeMobileTab, setActiveMobileTab] = useState<'catalog' | 'cart'>('catalog');
+  
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([]);
   const [namaPelanggan, setNamaPelanggan] = useState('');
@@ -81,7 +84,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
     try {
       const [txDetailsRes, settingsRes] = await Promise.all([
         fetch(`/api/transactions`),
-        fetch(`/api/settings`)
+        fetch(`/api/settings?userId=${currentUser.ID_User}`)
       ]);
       const txData = await txDetailsRes.json();
       const settings = await settingsRes.json();
@@ -258,9 +261,39 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
   };
 
   return (
-    <div id="pos-layout" className="grid grid-cols-1 lg:grid-cols-12 gap-8 h-full items-start">
-      {/* Left Panel: Catalog Grid (8 Cols) */}
-      <div id="pos-catalog-panel" className="lg:col-span-7 xl:col-span-8 space-y-6">
+    <div className="flex flex-col gap-6 h-full">
+      {/* Mobile Tab Selector */}
+      <div className="lg:hidden flex bg-white dark:bg-[#1a1613] p-1 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm w-full shrink-0">
+        <button
+          onClick={() => setActiveMobileTab('catalog')}
+          className={`flex-1 py-2 px-3 text-center rounded-lg text-xs font-bold transition duration-200 flex items-center justify-center gap-2 cursor-pointer ${
+            activeMobileTab === 'catalog'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+          }`}
+        >
+          <span>Katalog Menu</span>
+        </button>
+        <button
+          onClick={() => setActiveMobileTab('cart')}
+          className={`flex-1 py-2 px-3 text-center rounded-lg text-xs font-bold transition duration-200 flex items-center justify-center gap-2 cursor-pointer relative ${
+            activeMobileTab === 'cart'
+              ? 'bg-amber-600 text-white shadow-sm'
+              : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800'
+          }`}
+        >
+          <span>Keranjang Belanja</span>
+          {totalItem > 0 && (
+            <span className="bg-rose-500 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full min-w-4 text-center">
+              {totalItem}
+            </span>
+          )}
+        </button>
+      </div>
+
+      <div id="pos-layout" className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 h-full items-start">
+        {/* Left Panel: Catalog Grid (8 Cols) */}
+        <div id="pos-catalog-panel" className={`lg:col-span-7 xl:col-span-8 space-y-6 ${activeMobileTab === 'catalog' ? 'block' : 'hidden lg:block'}`}>
         
         {/* Search and Filters */}
         <div className="p-4 rounded-2xl bg-white dark:bg-[#1a1613] border border-zinc-200 dark:border-zinc-800 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
@@ -353,8 +386,8 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
         )}
       </div>
 
-      {/* Right Panel: Shopping Cart Drawer (4 Cols) */}
-      <div id="pos-cart-panel" className="lg:col-span-5 xl:col-span-4 p-5 rounded-2xl bg-white dark:bg-[#1a1613] border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between space-y-5">
+        {/* Right Panel: Shopping Cart Drawer (4 Cols) */}
+        <div id="pos-cart-panel" className={`lg:col-span-5 xl:col-span-4 p-5 rounded-2xl bg-white dark:bg-[#1a1613] border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col justify-between space-y-5 ${activeMobileTab === 'cart' ? 'block' : 'hidden lg:block'}`}>
         <div>
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800">
@@ -476,7 +509,28 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
         </div>
       </div>
 
-      {/* --- CHECKOUT PAYMENTS MODAL --- */}
+      {/* Mobile Floating Sticky Bottom Summary Bar */}
+      {totalItem > 0 && activeMobileTab === 'catalog' && (
+        <div className="lg:hidden fixed bottom-6 left-6 right-6 z-40 bg-white/95 dark:bg-[#110e0c]/95 border border-zinc-200 dark:border-zinc-800 shadow-2xl p-4 rounded-2xl flex items-center justify-between backdrop-blur-md animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <div className="flex flex-col text-left">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Total Pesanan</span>
+            <span className="text-sm font-extrabold text-amber-600 dark:text-amber-500 font-mono">
+              Rp {totalHarga.toLocaleString('id-ID')}
+            </span>
+            <span className="text-[10px] text-zinc-500 font-semibold">{totalItem} pcs item</span>
+          </div>
+          <button
+            onClick={() => setActiveMobileTab('cart')}
+            className="py-2.5 px-4 rounded-xl bg-amber-600 text-white font-bold text-xs hover:bg-amber-700 transition flex items-center gap-1.5 cursor-pointer shadow-md shadow-amber-600/15"
+          >
+            <span>Lihat Keranjang</span>
+            <ShoppingCart className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+    </div>
+
+  {/* --- CHECKOUT PAYMENTS MODAL --- */}
       {isCheckoutOpen && (
         <div id="checkout-modal" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="w-full max-w-md bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 relative overflow-hidden">

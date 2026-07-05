@@ -7,10 +7,11 @@ export interface User {
   ID_User: string;
   Nama: string;
   Email: string;
-  Role: 'admin' | 'kasir';
+  Role: 'creator' | 'admin' | 'kasir';
   Status: 'active' | 'inactive';
   Created_At: string;
   Password?: string; // Hashed or plain for simple auth
+  cafeId?: string;
 }
 
 export interface Menu {
@@ -35,6 +36,7 @@ export interface Transaction {
   PDF_URL: string; // Generated PDF receipt path
   Status: 'Paid' | 'Refunded';
   Metode_Bayar?: 'TUNAI' | 'QRIS';
+  cafeId?: string;
 }
 
 export interface TransactionDetail {
@@ -56,12 +58,25 @@ export interface ActivityLog {
   Description: string;
 }
 
+export interface Cafe {
+  id: string;
+  namaToko: string;
+  alamat: string;
+  telepon: string;
+  pesanFooter: string;
+  logoUrl?: string;
+  Created_At?: string;
+}
+
 export interface Settings {
   namaToko: string;
   alamat: string;
   telepon: string;
   pesanFooter: string;
+  logoUrl?: string;
   googleSpreadsheetId: string;
   googleDriveFolderId: string;
   autoSync: boolean;
+  cafes?: Cafe[];
+  activeCafeId?: string;
 }

@@ -33,6 +33,12 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
   const [fotoFileName, setFotoFileName] = useState<string>('');
   const [fotoPreview, setFotoPreview] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
+  const [fotoUrl, setFotoUrl] = useState<string>('');
+  const [imageInputMethod, setImageInputMethod] = useState<'upload' | 'url'>('upload');
+
+  // Delete Confirmation Dialog State
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [menuToDelete, setMenuToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Settings
   const [driveFolderId, setDriveFolderId] = useState('1nXzPzQ2lqqaATvNybfTqcYU9lHc2DuG5');
@@ -125,6 +131,8 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
     setFotoBase64('');
     setFotoFileName('');
     setFotoPreview('');
+    setFotoUrl('');
+    setImageInputMethod('upload');
     setIsFormOpen(true);
   };
 
@@ -138,6 +146,8 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
     setFotoBase64('');
     setFotoFileName('');
     setFotoPreview(menu.Foto_URL);
+    setFotoUrl(menu.Foto_URL.startsWith('/uploads/') ? '' : menu.Foto_URL);
+    setImageInputMethod(menu.Foto_URL.startsWith('/uploads/') ? 'upload' : 'url');
     setIsFormOpen(true);
   };
 
@@ -154,8 +164,9 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
       kategori,
       harga: Number(harga),
       status,
-      fotoBase64,
-      fotoFileName,
+      fotoBase64: imageInputMethod === 'upload' ? fotoBase64 : '',
+      fotoFileName: imageInputMethod === 'upload' ? fotoFileName : '',
+      fotoUrl: imageInputMethod === 'url' ? convertGoogleDriveUrl(fotoUrl) : '',
       actorId: currentUser.ID_User,
     };
 
@@ -187,10 +198,14 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
     }
   };
 
-  const handleDeleteMenu = async (id: string, name: string) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus menu "${name}"? Tindakan ini tidak dapat dibatalkan.`)) {
-      return;
-    }
+  const triggerDeleteMenu = (id: string, name: string) => {
+    setMenuToDelete({ id, name });
+    setDeleteConfirmOpen(true);
+  };
+
+  const executeDeleteMenu = async () => {
+    if (!menuToDelete) return;
+    const { id } = menuToDelete;
 
     try {
       const res = await fetch(`/api/menus/${id}?actorId=${currentUser.ID_User}`, {
@@ -199,11 +214,14 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
       const result = await res.json();
       if (result.success) {
         fetchMenus();
+        setDeleteConfirmOpen(false);
+        setMenuToDelete(null);
       } else {
         alert(result.message || 'Gagal menghapus menu.');
       }
     } catch (err) {
       console.error('Error deleting menu:', err);
+      alert('Terjadi kesalahan koneksi saat menghapus menu.');
     }
   };
 
@@ -223,6 +241,31 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
 
   const categories = ['Semua', 'Makanan', 'Minuman'];
 
+  // Helper to convert Google Drive sharing links to direct image source links
+  const convertGoogleDriveUrl = (url: string): string => {
+    if (!url) return url;
+    
+    let fileId = '';
+    
+    // Pattern 1: /file/d/FILE_ID
+    const dMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    // Pattern 2: id=FILE_ID or &id=FILE_ID
+    const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    
+    if (dMatch && dMatch[1]) {
+      fileId = dMatch[1];
+    } else if (idMatch && idMatch[1]) {
+      fileId = idMatch[1];
+    }
+
+    if (fileId) {
+      // Use lh3.googleusercontent.com/d/FILE_ID as it is extremely robust,
+      // doesn't have same-site cookie restrictions, and bypasses blocks in preview iframes.
+      return `https://lh3.googleusercontent.com/d/${fileId}`;
+    }
+    return url;
+  };
+
   return (
     <div id="menu-management-container" className="space-y-6">
       
@@ -233,11 +276,11 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
             Manajemen Data Menu
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Tambah, edit, atau hapus menu Kafe Maissy Coffee. Unggahan foto menu otomatis tersimpan di Google Drive.
+            Tambah, edit, atau hapus menu Kafe Maissy Coffee.
           </p>
         </div>
 
-        {currentUser.Role === 'admin' && (
+        {(currentUser.Role === 'admin' || currentUser.Role === 'creator') && (
           <button
             id="open-add-menu-btn"
             onClick={handleOpenAdd}
@@ -247,17 +290,6 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
             Tambah Menu Baru
           </button>
         )}
-      </div>
-
-      {/* Cloud Synchronizer Banner */}
-      <div className="p-4 rounded-xl border border-teal-500/10 bg-teal-500/5 flex items-start gap-3">
-        <CloudLightning className="h-5 w-5 text-teal-600 dark:text-teal-500 flex-shrink-0 mt-0.5" />
-        <div>
-          <h4 className="text-xs font-bold text-teal-800 dark:text-teal-400">Penyimpanan Terintegrasi Google Drive</h4>
-          <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-            Foto produk secara otomatis diproses, dioptimalkan, dan diunggah ke Google Drive Folder ID: <code className="font-mono bg-teal-500/10 px-1 py-0.5 rounded text-[9px] text-teal-700 dark:text-teal-300 font-bold">{driveFolderId}</code>.
-          </p>
-        </div>
       </div>
 
       {/* Search and Category Tabs */}
@@ -313,7 +345,7 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                 <th className="px-6 py-4">Kategori</th>
                 <th className="px-6 py-4">Harga</th>
                 <th className="px-6 py-4">Status</th>
-                {currentUser.Role === 'admin' && <th className="px-6 py-4 text-right">Aksi</th>}
+                {(currentUser.Role === 'admin' || currentUser.Role === 'creator') && <th className="px-6 py-4 text-right">Aksi</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800/60 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
@@ -350,7 +382,7 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                       {menu.Status}
                     </span>
                   </td>
-                  {currentUser.Role === 'admin' && (
+                  {(currentUser.Role === 'admin' || currentUser.Role === 'creator') && (
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
@@ -363,7 +395,7 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                         </button>
                         <button
                           id={`del-menu-${menu.ID_Menu}`}
-                          onClick={() => handleDeleteMenu(menu.ID_Menu, menu.Nama_Menu)}
+                          onClick={() => triggerDeleteMenu(menu.ID_Menu, menu.Nama_Menu)}
                           className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-[#1a1613] hover:bg-rose-50 dark:hover:bg-rose-950/20 text-zinc-400 hover:text-rose-600 transition cursor-pointer"
                           title="Hapus Menu"
                         >
@@ -482,63 +514,139 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                 </div>
               </div>
 
-              {/* Photo Upload with Drag-and-Drop Area */}
+              {/* Photo Input Selector */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 block">
-                  Foto Produk (Maks 2MB, format JPG/PNG)
+                  Metode Foto Produk
                 </label>
-                
-                <div
-                  onDragEnter={handleDrag}
-                  onDragOver={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-2xl p-4 text-center transition-all duration-300 relative flex flex-col items-center justify-center gap-2
-                    ${dragActive 
-                      ? 'border-amber-500 bg-amber-500/5' 
-                      : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c]/40 hover:border-zinc-300'}`}
-                >
-                  {fotoPreview ? (
-                    <div className="relative h-24 w-24 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
-                      <img src={fotoPreview} alt="Preview" className="object-cover w-full h-full" />
-                      <button
-                        type="button"
-                        id="remove-photo-preview-btn"
-                        onClick={() => {
-                          setFotoBase64('');
-                          setFotoFileName('');
-                          setFotoPreview('');
-                        }}
-                        className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full hover:bg-black/80 cursor-pointer"
-                        title="Hapus foto"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="p-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400">
-                        <Upload className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                          Seret & letakkan file foto di sini, atau
-                        </p>
-                        <label htmlFor="file-upload-input" className="text-xs font-bold text-amber-600 hover:text-amber-700 cursor-pointer underline inline-block mt-0.5">
-                          klik untuk pilih dari perangkat
-                        </label>
-                      </div>
-                      <input
-                        id="file-upload-input"
-                        type="file"
-                        accept="image/jpeg,image/png,image/jpg"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                    </>
-                  )}
+                <div className="grid grid-cols-2 gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageInputMethod('upload');
+                      setFotoPreview(fotoBase64 ? fotoBase64 : '');
+                    }}
+                    className={`py-1.5 text-center text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      imageInputMethod === 'upload'
+                        ? 'bg-white dark:bg-[#1a1613] text-amber-600 dark:text-amber-500 shadow-xs'
+                        : 'text-zinc-500 dark:text-zinc-400'
+                    }`}
+                  >
+                    Unggah Berkas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageInputMethod('url');
+                      setFotoPreview(fotoUrl ? fotoUrl : '');
+                    }}
+                    className={`py-1.5 text-center text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      imageInputMethod === 'url'
+                        ? 'bg-white dark:bg-[#1a1613] text-amber-600 dark:text-amber-500 shadow-xs'
+                        : 'text-zinc-500 dark:text-zinc-400'
+                    }`}
+                  >
+                    Gunakan URL Gambar
+                  </button>
                 </div>
               </div>
+
+              {imageInputMethod === 'upload' ? (
+                /* Photo Upload with Drag-and-Drop Area */
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 block">
+                    Foto Produk (Maks 2MB, format JPG/PNG)
+                  </label>
+                  
+                  <div
+                    onDragEnter={handleDrag}
+                    onDragOver={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDrop={handleDrop}
+                    className={`border-2 border-dashed rounded-2xl p-4 text-center transition-all duration-300 relative flex flex-col items-center justify-center gap-2
+                      ${dragActive 
+                        ? 'border-amber-500 bg-amber-500/5' 
+                        : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c]/40 hover:border-zinc-300'}`}
+                  >
+                    {fotoPreview && fotoBase64 ? (
+                      <div className="relative h-24 w-24 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                        <img src={fotoPreview} alt="Preview" className="object-cover w-full h-full" />
+                        <button
+                          type="button"
+                          id="remove-photo-preview-btn"
+                          onClick={() => {
+                            setFotoBase64('');
+                            setFotoFileName('');
+                            setFotoPreview('');
+                          }}
+                          className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full hover:bg-black/80 cursor-pointer"
+                          title="Hapus foto"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="p-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400">
+                          <Upload className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                            Seret & letakkan file foto di sini, atau
+                          </p>
+                          <label htmlFor="file-upload-input" className="text-xs font-bold text-amber-600 hover:text-amber-700 cursor-pointer underline inline-block mt-0.5">
+                            klik untuk pilih dari perangkat
+                          </label>
+                        </div>
+                        <input
+                          id="file-upload-input"
+                          type="file"
+                          accept="image/jpeg,image/png,image/jpg"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* URL Input Field */
+                <div className="space-y-1.5">
+                  <label htmlFor="menu-url-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 block">
+                    URL Gambar Menu (Format HTTP/HTTPS)
+                  </label>
+                  <input
+                    id="menu-url-field"
+                    type="url"
+                    placeholder="Contoh: https://domain.com/gambar-menu.jpg atau link Google Drive"
+                    value={fotoUrl}
+                    onChange={(e) => {
+                      const converted = convertGoogleDriveUrl(e.target.value.trim());
+                      setFotoUrl(converted);
+                      setFotoPreview(converted); // Sync preview to URL
+                    }}
+                    className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
+                  />
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-normal mt-1">
+                    💡 <strong>Tips Google Drive:</strong> Tempelkan link sharing biasa dari Google Drive. Aplikasi akan otomatis mengubahnya menjadi link gambar langsung. Pastikan akses file diatur ke <strong>"Siapa saja yang memiliki link" (Anyone with the link can view)</strong> agar gambar dapat muncul.
+                  </p>
+                  {fotoUrl && (
+                    <div className="mt-2 flex flex-col items-center">
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-1 font-semibold">Pratinjau Gambar URL:</p>
+                      <div className="relative h-24 w-24 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                        <img 
+                          src={fotoUrl} 
+                          alt="Preview URL" 
+                          className="object-cover w-full h-full" 
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=200';
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Submit Action */}
               <div className="pt-2 flex justify-end gap-3">
@@ -560,6 +668,55 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* --- DELETE CONFIRMATION DIALOG --- */}
+      {deleteConfirmOpen && menuToDelete && (
+        <div id="delete-confirm-dialog" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-[60]">
+          <div className="w-full max-w-sm bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 relative animate-in fade-in zoom-in-95 duration-150">
+            <button
+              onClick={() => {
+                setDeleteConfirmOpen(false);
+                setMenuToDelete(null);
+              }}
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-500 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="flex flex-col items-center text-center mt-2">
+              <div className="h-12 h-12 w-12 rounded-full bg-rose-500/10 text-rose-600 flex items-center justify-center mb-4">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-base">
+                Konfirmasi Hapus Menu
+              </h3>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 leading-relaxed">
+                Apakah Anda yakin ingin menghapus menu <strong className="text-zinc-950 dark:text-zinc-100 font-semibold">"{menuToDelete.name}"</strong>? Tindakan ini bersifat permanen dan tidak dapat dibatalkan.
+              </p>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeleteConfirmOpen(false);
+                  setMenuToDelete(null);
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition text-center"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                id="confirm-delete-menu-btn"
+                onClick={executeDeleteMenu}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 text-white font-bold text-xs hover:bg-rose-700 cursor-pointer transition text-center shadow-lg shadow-rose-600/10"
+              >
+                Ya, Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}

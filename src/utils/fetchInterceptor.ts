@@ -55,11 +55,15 @@ if (!window.__originalFetch) {
       try {
         const originalResponse = await window.__originalFetch!(input, init);
 
-        // If the server returns a 404 for an API route, it means 
-        // the custom Express backend is not running, or we are in a static 
+        // If the server returns a 404 for an API route, or if the response content is HTML 
+        // (which indicates SPA fallback/index.html instead of valid JSON), it means
+        // the custom Express backend is not running properly, or we are in a static/proxy
         // environment. We fallback to the direct client-side Firestore Mode.
-        if (originalResponse.status === 404) {
-          console.warn('[Fetch Interceptor] Express server returned 404. Switching to direct client-side Firestore Mode!');
+        const contentType = originalResponse.headers.get('content-type');
+        const isHtmlResponse = contentType && contentType.includes('text/html');
+
+        if (originalResponse.status === 404 || isHtmlResponse) {
+          console.warn(`[Fetch Interceptor] Express API returned ${originalResponse.status} ${isHtmlResponse ? '(HTML response detected)' : ''}. Switching to direct client-side Firestore Mode!`);
           
           // Activate the fallback
           window.__useClientFirebase = true;

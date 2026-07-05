@@ -8,7 +8,7 @@ import {
   Coffee, LayoutDashboard, ShoppingCart, BookOpen, Users, 
   FileText, Settings as SettingsIcon, LogOut, Menu as Hamburger, 
   X, Lock, Mail, UserCheck, ShieldAlert, KeyRound, Sparkles, AlertCircle,
-  MessageSquare, Send
+  MessageSquare, Send, Search, Check, Receipt
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -35,7 +35,7 @@ export default function App() {
     const savedUser = localStorage.getItem('currentUser');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const [authMode, setAuthMode] = useState<'login' | 'register' | 'forgot' | 'directory'>('login');
 
   // Auth inputs
   const [loginEmail, setLoginEmail] = useState('');
@@ -45,9 +45,12 @@ export default function App() {
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regRole, setRegRole] = useState<'kasir' | 'admin'>('kasir');
+  const [cafes, setCafes] = useState<any[]>([]);
+  const [regCafeId, setRegCafeId] = useState('');
 
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotNewPassword, setForgotNewPassword] = useState('');
+  const [searchOutletId, setSearchOutletId] = useState('');
 
   const [authError, setAuthError] = useState('');
   const [authSuccessMsg, setAuthSuccessMsg] = useState('');
@@ -179,6 +182,66 @@ export default function App() {
     localStorage.setItem('isDarkMode', String(isDarkMode));
   }, [isDarkMode]);
 
+  // Dynamic Cafe/Outlet Name state
+  const [activeCafeName, setActiveCafeName] = useState('Maissy Coffee');
+  const [activeCafeLogo, setActiveCafeLogo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!currentUser) {
+      setActiveCafeName('Maissy Coffee');
+      setActiveCafeLogo(null);
+      return;
+    }
+    const fetchActiveCafeDetails = async () => {
+      try {
+        const res = await fetch(`/api/settings?userId=${currentUser.ID_User}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            if (data.namaToko) {
+              setActiveCafeName(data.namaToko);
+            }
+            if (data.logoUrl) {
+              setActiveCafeLogo(data.logoUrl);
+            } else {
+              setActiveCafeLogo(null);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching dynamic cafe name:', err);
+      }
+    };
+    fetchActiveCafeDetails();
+
+    const handleUpdate = () => {
+      fetchActiveCafeDetails();
+    };
+    window.addEventListener('ws_db_update', handleUpdate);
+    return () => {
+      window.removeEventListener('ws_db_update', handleUpdate);
+    };
+  }, [currentUser]);
+
+  // Fetch cafes for registration
+  useEffect(() => {
+    const fetchCafes = async () => {
+      try {
+        const res = await fetch('/api/cafes');
+        if (res.ok) {
+          const data = await res.json();
+          setCafes(data);
+          if (data.length > 0) {
+            setRegCafeId(data[0].id);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching cafes for register:', err);
+      }
+    };
+    fetchCafes();
+  }, []);
+
   // Auth Actions
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -247,6 +310,7 @@ export default function App() {
           email: regEmail,
           password: regPassword,
           role: regRole,
+          cafeId: regCafeId,
         }),
       });
 
@@ -368,17 +432,17 @@ export default function App() {
     { id: 'pos', label: 'Transaksi POS', icon: ShoppingCart, roles: ['admin', 'kasir'] },
     { id: 'menu', label: 'Katalog Menu (CRUD)', icon: BookOpen, roles: ['admin'] },
     { id: 'users', label: 'Kelola Pengguna', icon: Users, roles: ['admin'] },
-    { id: 'reports', label: 'Laporan Penjualan', icon: FileText, roles: ['admin', 'kasir'] },
-    { id: 'logs', label: 'Audit Trail Logs', icon: KeyRound, roles: ['admin'] },
+    { id: 'reports', label: 'Laporan Penjualan', icon: FileText, roles: ['admin'] },
+    { id: 'logs', label: 'Audit Trail Logs', icon: KeyRound, roles: [] },
     { id: 'settings', label: 'Pengaturan Kafe', icon: SettingsIcon, roles: ['admin'] },
   ];
 
-  const allowedLinks = navLinks.filter(link => currentUser && link.roles.includes(currentUser.Role));
+  const allowedLinks = navLinks.filter(link => currentUser && (currentUser.Role === 'creator' || link.roles.includes(currentUser.Role)));
 
   // --- LOGGED OUT AUTH VIEW ---
   if (!token || !currentUser) {
     return (
-      <div className="min-h-screen bg-[#faf8f5] dark:bg-[#0c0a09] flex items-center justify-center p-4 transition-colors duration-300">
+      <div className="min-h-screen bg-[#faf8f5] dark:bg-[#0c0a09] flex flex-col items-center justify-center p-4 transition-colors duration-300">
         <div className="absolute top-4 right-4 z-10">
           <ThemeToggle isDarkMode={isDarkMode} onToggle={() => setIsDarkMode(!isDarkMode)} />
         </div>
@@ -392,14 +456,17 @@ export default function App() {
         >
           {/* Top Logo and Branding */}
           <div className="flex flex-col items-center text-center">
-            <div className="h-14 w-14 rounded-2xl bg-amber-600/10 text-amber-600 flex items-center justify-center mb-4 border border-amber-600/20">
-              <Coffee className="h-8 w-8 text-amber-600" />
+            <div className="relative mb-5 flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-tr from-amber-500 to-amber-600 rounded-2xl blur-md opacity-25 animate-pulse" />
+              <div className="relative h-14 w-14 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white flex items-center justify-center border border-amber-400/30 shadow-lg">
+                <Receipt className="h-7 w-7 text-white" />
+              </div>
             </div>
-            <h1 className="text-2xl font-black tracking-tight text-zinc-950 dark:text-zinc-50 font-sans">
-              Kafe Maissy Coffee
+            <h1 className="text-3xl font-black tracking-wider text-zinc-950 dark:text-zinc-50 font-sans">
+              E-KASIR
             </h1>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 font-semibold uppercase tracking-wider">
-              POS & Management Suite
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1.5 font-bold uppercase tracking-[0.25em]">
+              By PGW
             </p>
           </div>
 
@@ -533,18 +600,29 @@ export default function App() {
                   />
                 </div>
 
-                {/* Role select */}
+                {/* Role select (Read-only as Kasir) */}
                 <div className="space-y-1.5">
-                  <label htmlFor="reg-role" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">Peran Sistem</label>
-                  <select
-                    id="reg-role"
-                    value={regRole}
-                    onChange={(e: any) => setRegRole(e.target.value)}
+                  <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">Peran Sistem</label>
+                  <input
+                    type="text"
+                    value="User / Kasir"
+                    disabled
+                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-[#1a1613]/50 text-zinc-500 dark:text-zinc-400 text-xs font-bold cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Cafe input */}
+                <div className="space-y-1.5">
+                  <label htmlFor="reg-cafe" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">ID Outlet Cafe / Warung</label>
+                  <input
+                    id="reg-cafe"
+                    type="text"
+                    placeholder="Masukkan ID Outlet secara manual (misal: cafe-maissy-coffee)..."
+                    value={regCafeId}
+                    onChange={(e) => setRegCafeId(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c]/60 text-zinc-950 dark:text-zinc-100 text-xs font-bold focus:outline-none focus:border-amber-500 transition"
-                  >
-                    <option value="kasir">User (Kasir Maissy)</option>
-                    <option value="admin">Admin (Manager/Owner)</option>
-                  </select>
+                    required
+                  />
                 </div>
 
                 <button
@@ -603,24 +681,76 @@ export default function App() {
                 </button>
               </motion.form>
             )}
+
+            {authMode === 'directory' && (
+              <motion.div 
+                key="directory-view"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="space-y-4"
+              >
+                <div className="text-center pb-2 border-b border-zinc-100 dark:border-zinc-800/80">
+                  <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-sm uppercase tracking-wider">Direktori & Verifikasi</h3>
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">ID Outlet Cafe & Warung</p>
+                </div>
+
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed text-center">
+                  Gunakan panel ini untuk memverifikasi apakah ID Outlet cafe Anda telah terdaftar dalam sistem operasional atau belum.
+                </p>
+
+                {/* Search/Verifier Input */}
+                <div className="space-y-1.5">
+                  <label htmlFor="search-outlet-id" className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Search className="h-3.5 w-3.5 text-zinc-400" /> Cari / Verifikasi ID Outlet
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="search-outlet-id"
+                      type="text"
+                      placeholder="Masukkan ID Outlet (misal: cafe-maissy-coffee)..."
+                      value={searchOutletId}
+                      onChange={(e) => setSearchOutletId(e.target.value)}
+                      className="w-full pl-4 pr-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c]/60 text-zinc-950 dark:text-zinc-100 placeholder-zinc-400 text-xs font-bold focus:outline-none focus:border-amber-500 transition"
+                    />
+                  </div>
+                  
+                  {searchOutletId.trim() && (
+                    <div className="mt-1.5">
+                      {cafes.some(c => c.id.toLowerCase() === searchOutletId.trim().toLowerCase()) ? (
+                        <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold text-emerald-600 dark:text-emerald-500 flex items-center gap-1.5">
+                          <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                          <span>ID "{searchOutletId}": TERDAFTAR (AKTIF) - {cafes.find(c => c.id.toLowerCase() === searchOutletId.trim().toLowerCase())?.namaToko}</span>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-[11px] font-bold text-rose-600 dark:text-rose-500 flex items-center gap-1.5">
+                          <X className="h-4 w-4 text-rose-600 flex-shrink-0" />
+                          <span>ID "{searchOutletId}": BELUM TERDAFTAR</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
           </AnimatePresence>
 
           {/* Toggle buttons to switch Auth Mode */}
           <div className="flex justify-between text-xs font-bold border-t border-zinc-100 dark:border-zinc-800/80 pt-4 text-zinc-500 dark:text-zinc-400">
             {authMode === 'login' ? (
               <>
-                <span>Belum punya akun?</span>
+                <span>Butuh verifikasi outlet?</span>
                 <button
-                  id="link-register"
-                  onClick={() => { setAuthMode('register'); setAuthError(''); setAuthSuccessMsg(''); }}
+                  id="link-directory"
+                  onClick={() => { setAuthMode('directory'); setAuthError(''); setAuthSuccessMsg(''); }}
                   className="text-amber-600 hover:underline cursor-pointer"
                 >
-                  Registrasi Staf
+                  Direktori & Verifikasi
                 </button>
               </>
             ) : (
               <>
-                <span>Sudah punya akun?</span>
+                <span>Kembali ke halaman utama?</span>
                 <button
                   id="link-login"
                   onClick={() => { setAuthMode('login'); setAuthError(''); setAuthSuccessMsg(''); }}
@@ -643,8 +773,17 @@ export default function App() {
       {/* Mobile Top Header (hidden on md screens) */}
       <header className="md:hidden bg-white dark:bg-[#110e0c] border-b border-zinc-200 dark:border-zinc-800 px-5 py-4 flex justify-between items-center sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-2">
-          <Coffee className="h-5.5 w-5.5 text-amber-500" />
-          <span className="font-extrabold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">Maissy Coffee</span>
+          {activeCafeLogo ? (
+            <img 
+              src={activeCafeLogo} 
+              alt="Logo" 
+              className="h-6 w-6 rounded-md object-cover border border-zinc-200 dark:border-zinc-800"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <Coffee className="h-5.5 w-5.5 text-amber-500" />
+          )}
+          <span className="font-extrabold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">{activeCafeName}</span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -676,12 +815,21 @@ export default function App() {
         <div className="space-y-6 overflow-y-auto pr-1">
           {/* Logo Brand Title */}
           <div className="flex items-center gap-3 pb-4 border-b border-zinc-100 dark:border-zinc-800/80">
-            <div className="p-2 bg-amber-600/10 rounded-xl text-amber-600">
-              <Coffee className="h-6 w-6" />
-            </div>
+            {activeCafeLogo ? (
+              <img 
+                src={activeCafeLogo} 
+                alt="Logo" 
+                className="h-10 w-10 rounded-xl object-cover border border-zinc-200 dark:border-zinc-800"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="p-2 bg-amber-600/10 rounded-xl text-amber-600">
+                <Coffee className="h-6 w-6" />
+              </div>
+            )}
             <div>
-              <h2 className="font-extrabold text-sm tracking-tight text-zinc-950 dark:text-zinc-50">Maissy Coffee</h2>
-              <span className="text-[10px] text-amber-600 dark:text-amber-500 font-extrabold uppercase tracking-widest block mt-0.5">POS System</span>
+              <h2 className="font-extrabold text-sm tracking-tight text-zinc-950 dark:text-zinc-50">{activeCafeName}</h2>
+              <span className="text-[10px] text-amber-600 dark:text-amber-500 font-extrabold uppercase tracking-widest block mt-0.5">By PGW</span>
             </div>
           </div>
 
@@ -695,36 +843,6 @@ export default function App() {
               <span className="text-[9px] text-zinc-400 dark:text-zinc-500 block uppercase font-bold tracking-wide">{currentUser.Role}</span>
             </div>
           </div>
-
-          {/* Realtime Active Presence Users */}
-          {presenceUsers.length > 1 && (
-            <div className="p-3 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800 space-y-2 bg-emerald-500/5">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-500 uppercase tracking-widest">Staf Aktif ({presenceUsers.length})</span>
-              </div>
-              <div className="space-y-1.5 max-h-24 overflow-y-auto pr-1">
-                {presenceUsers
-                  .filter(u => u.ID_User !== currentUser.ID_User)
-                  .map((u, i) => (
-                    <div key={i} className="flex items-center justify-between text-[11px]">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="h-5 w-5 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 text-[10px] font-bold flex items-center justify-center shrink-0">
-                          {u.Nama.charAt(0)}
-                        </div>
-                        <div className="min-w-0 text-left">
-                          <span className="font-semibold text-zinc-700 dark:text-zinc-300 block truncate leading-tight">{u.Nama}</span>
-                          <span className="text-[9px] text-zinc-400 dark:text-zinc-500 block capitalize leading-none">{u.Role}</span>
-                        </div>
-                      </div>
-                      <span className="text-[9px] text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-[#1a1613] px-1.5 py-0.5 rounded shrink-0">
-                        {u.currentView === 'pos' ? 'POS' : u.currentView === 'menu' ? 'Menu' : u.currentView === 'users' ? 'Staf' : u.currentView === 'reports' ? 'Laporan' : u.currentView === 'logs' ? 'Log' : u.currentView === 'settings' ? 'Setelan' : 'Dashboard'}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
 
           {/* Navigation Links List */}
           <nav className="space-y-1">
@@ -772,7 +890,7 @@ export default function App() {
       </aside>
 
       {/* Main Panel Area */}
-      <main id="main-content-panel" className="flex-1 p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full overflow-y-auto h-screen md:h-auto">
+      <main id="main-content-panel" className="flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
             key={activePage}

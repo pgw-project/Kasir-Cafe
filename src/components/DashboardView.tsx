@@ -16,11 +16,29 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [cafeName, setCafeName] = useState('Maissy Coffee');
+
+  useEffect(() => {
+    const fetchCafeName = async () => {
+      try {
+        const res = await fetch(`/api/settings?userId=${currentUser?.ID_User}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.namaToko) {
+            setCafeName(data.namaToko);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching cafe name:', err);
+      }
+    };
+    fetchCafeName();
+  }, [currentUser]);
 
   const fetchAnalytics = async () => {
     try {
       setRefreshing(true);
-      const res = await fetch('/api/reports/analytics');
+      const res = await fetch(`/api/reports/analytics?userId=${currentUser?.ID_User}`);
       const json = await res.json();
       setData(json);
     } catch (err) {
@@ -47,7 +65,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
     return (
       <div id="dashboard-loading" className="flex flex-col items-center justify-center h-96 gap-4">
         <RefreshCw className="h-8 w-8 animate-spin text-amber-500" />
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Memuat dasbor analitik Maissy Coffee...</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Memuat dasbor analitik {cafeName}...</p>
       </div>
     );
   }
@@ -83,7 +101,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
           </h1>
           <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
             {currentUser.Role === 'admin' 
-              ? 'Berikut ringkasan performa dan metrik operasional Kafe Maissy Coffee saat ini.'
+              ? `Berikut ringkasan performa dan metrik operasional ${cafeName} saat ini.`
               : 'Siap melayani pelanggan hari ini? Gunakan panel POS untuk mencatat pesanan.'}
           </p>
         </div>
