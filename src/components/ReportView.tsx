@@ -184,7 +184,30 @@ export default function ReportView({ currentUser }: ReportViewProps) {
     if (win) {
       win.focus();
     } else {
-      alert('Popup diblokir! Izinkan popup untuk memprint struk.');
+      console.log('Popup blocked, attempting iframe direct print...');
+      let iframe = document.getElementById('print-iframe-fallback') as HTMLIFrameElement;
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'print-iframe-fallback';
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+      }
+      iframe.src = url;
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (err) {
+          console.error('Failed to print from fallback iframe:', err);
+          alert('Popup diblokir! Silakan izinkan popup di browser Anda atau buka aplikasi di tab baru untuk mencetak.');
+        }
+      };
     }
   };
 

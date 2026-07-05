@@ -1372,9 +1372,9 @@ async function startServer() {
           <button class="no-print-btn" onclick="window.print()">Cetak Struk (PDF)</button>
         </div>
         <div class="header text-center">
-          <p class="title">${settings.namaToko}</p>
-          <p style="margin: 3px 0;">${settings.alamat}</p>
-          <p style="margin: 3px 0;">Telp: ${settings.telepon}</p>
+          <p class="title">${settings.namaToko || 'Maissy Coffee'}</p>
+          <p style="margin: 3px 0;">${settings.alamat || ''}</p>
+          <p style="margin: 3px 0;">Telp: ${settings.telepon || '-'}</p>
         </div>
         
         <div class="divider"></div>
@@ -1383,11 +1383,18 @@ async function startServer() {
           <table>
             <tr>
               <td>No: ${tx.ID_Transaksi}</td>
-              <td class="text-right">Kasir: ${tx.Kasir}</td>
+              <td class="text-right">Kasir: ${tx.Kasir || 'Kasir'}</td>
             </tr>
             <tr>
-              <td>Tgl: ${new Date(tx.Tanggal).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</td>
-              <td class="text-right">Cust: ${tx.Nama_Pelanggan}</td>
+              <td>Tgl: ${(() => {
+                try {
+                  const d = new Date(tx.Tanggal);
+                  return isNaN(d.getTime()) ? '-' : d.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' });
+                } catch (e) {
+                  return '-';
+                }
+              })()}</td>
+              <td class="text-right">Cust: ${tx.Nama_Pelanggan || '-'}</td>
             </tr>
           </table>
         </div>
@@ -1398,11 +1405,11 @@ async function startServer() {
           <tbody>
             ${details.map((item: TransactionDetail) => `
               <tr>
-                <td colspan="2">${item.Nama_Menu}</td>
+                <td colspan="2">${item.Nama_Menu || ''}</td>
               </tr>
               <tr>
-                <td style="padding-left: 10px;">${item.Qty} x Rp ${item.Harga_Satuan.toLocaleString('id-ID')}</td>
-                <td class="text-right">Rp ${item.Subtotal.toLocaleString('id-ID')}</td>
+                <td style="padding-left: 10px;">${item.Qty || 0} x Rp ${Number(item.Harga_Satuan || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right">Rp ${Number(item.Subtotal || 0).toLocaleString('id-ID')}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -1413,11 +1420,11 @@ async function startServer() {
         <table>
           <tr>
             <td>Total Item:</td>
-            <td class="text-right">${tx.Total_Item}</td>
+            <td class="text-right">${tx.Total_Item || 0}</td>
           </tr>
           <tr style="font-weight: bold;">
             <td>Grand Total:</td>
-            <td class="text-right">Rp ${tx.Total_Harga.toLocaleString('id-ID')}</td>
+            <td class="text-right">Rp ${Number(tx.Total_Harga || 0).toLocaleString('id-ID')}</td>
           </tr>
           <tr>
             <td>Metode Bayar:</td>
@@ -1425,11 +1432,11 @@ async function startServer() {
           </tr>
           <tr>
             <td>Bayar:</td>
-            <td class="text-right">Rp ${tx.Bayar.toLocaleString('id-ID')}</td>
+            <td class="text-right">Rp ${Number(tx.Bayar || 0).toLocaleString('id-ID')}</td>
           </tr>
           <tr>
             <td>Kembali:</td>
-            <td class="text-right">Rp ${tx.Kembali.toLocaleString('id-ID')}</td>
+            <td class="text-right">Rp ${Number(tx.Kembali || 0).toLocaleString('id-ID')}</td>
           </tr>
         </table>
         
@@ -1437,7 +1444,7 @@ async function startServer() {
         
         <div class="footer text-center">
           <p style="margin: 5px 0;">${settings.pesanFooter}</p>
-          <p style="margin: 5px 0; font-size: 8px;">Diberdayakan oleh Maissy Coffee POS</p>
+          <p style="margin: 5px 0; font-size: 8px;">support system By PGW</p>
         </div>
         
         <script>

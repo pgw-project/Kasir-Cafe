@@ -49,10 +49,26 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
   // Success Modal State
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [latestTx, setLatestTx] = useState<any>(null);
+  const [settings, setSettings] = useState<any>(null);
 
   // Bluetooth Printer states
   const [btStatus, setBtStatus] = useState<{ connected: boolean; name?: string }>({ connected: false });
   const [btLoading, setBtLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`/api/settings?userId=${currentUser?.ID_User || ''}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSettings(data);
+        }
+      } catch (e) {
+        console.error('Error fetching settings in POSView:', e);
+      }
+    };
+    fetchSettings();
+  }, [currentUser]);
 
   useEffect(() => {
     setBtStatus(getConnectedPrinter());
@@ -232,7 +248,10 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
 
       const result = await res.json();
       if (result.success) {
-        setLatestTx(result.transaction);
+        setLatestTx({
+          ...result.transaction,
+          details: result.details || []
+        });
         setIsCheckoutOpen(false);
         setIsSuccessOpen(true);
         clearCart();
@@ -256,7 +275,30 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
     if (win) {
       win.focus();
     } else {
-      alert('Popup diblokir! Harap izinkan popup untuk mencetak struk belanja.');
+      console.log('Popup blocked, attempting iframe direct print...');
+      let iframe = document.getElementById('print-iframe-fallback') as HTMLIFrameElement;
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = 'print-iframe-fallback';
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        iframe.style.visibility = 'hidden';
+        document.body.appendChild(iframe);
+      }
+      iframe.src = url;
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (err) {
+          console.error('Failed to print from fallback iframe:', err);
+          alert('Popup diblokir! Silakan izinkan popup di browser Anda atau buka aplikasi di tab baru untuk mencetak.');
+        }
+      };
     }
   };
 
@@ -734,15 +776,79 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
 
             {/* Quick print receipt options */}
             <div className="mt-5 space-y-4">
-              {/* Receipt print iframe emulation for instant preview inside POS layout */}
+              {/* Real-time Thermal Receipt Preview styled in pure CSS */}
               <div className="p-4 rounded-xl border border-zinc-100 dark:border-zinc-800/80 bg-zinc-50 dark:bg-[#25201c]/40">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-2">Pratinjau Struk Belanja</span>
-                <div className="h-44 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white shadow-sm">
-                  <iframe
-                    src={`/api/receipt/${latestTx.ID_Transaksi}/print`}
-                    title="Receipt Preview"
-                    className="w-full h-full border-none"
-                  />
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Pratinjau Struk Belanja</span>
+                  <button
+                    onClick={() => openPrintWindow(latestTx.ID_Transaksi, '80')}
+                    className="text-[10px] font-bold text-amber-600 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Printer className="h-3 w-3" /> Buka Cetak Sistem (PDF)
+                  </button>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#201a15] p-4 text-zinc-900 dark:text-zinc-100 font-mono text-xs shadow-inner relative leading-relaxed select-text">
+                  <div className="text-center space-y-0.5">
+                    <p className="font-bold text-sm tracking-wide">{settings?.namaToko || 'KAFE MAISSY'}</p>
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-tight">{settings?.alamat || 'Alamat Outlet'}</p>
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400">Telp: {settings?.telepon || '-'}</p>
+                  </div>
+
+                  <div className="border-t border-dashed border-zinc-300 dark:border-zinc-700 my-2"></div>
+
+                  <div className="grid grid-cols-2 text-[10px] text-zinc-600 dark:text-zinc-400 gap-y-0.5">
+                    <div>No: {latestTx.ID_Transaksi}</div>
+                    <div className="text-right">Kasir: {latestTx.Kasir || 'Kasir'}</div>
+                    <div>Tgl: {latestTx.Tanggal ? new Date(latestTx.Tanggal).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' }) : '-'}</div>
+                    <div className="text-right">Cust: {latestTx.Nama_Pelanggan}</div>
+                  </div>
+
+                  <div className="border-t border-dashed border-zinc-300 dark:border-zinc-700 my-2"></div>
+
+                  <div className="space-y-1.5 text-[11px]">
+                    {(latestTx.details || []).map((item: any, idx: number) => (
+                      <div key={idx} className="space-y-0.5">
+                        <div className="font-semibold text-zinc-800 dark:text-zinc-200 text-left">{item.Nama_Menu}</div>
+                        <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
+                          <span>{item.Qty} x Rp {Number(item.Harga_Satuan || 0).toLocaleString('id-ID')}</span>
+                          <span className="text-zinc-800 dark:text-zinc-200">Rp {Number(item.Subtotal || 0).toLocaleString('id-ID')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-dashed border-zinc-300 dark:border-zinc-700 my-2"></div>
+
+                  <div className="space-y-1 text-[11px]">
+                    <div className="flex justify-between">
+                      <span>Total Item:</span>
+                      <span>{latestTx.Total_Item || 0}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-zinc-950 dark:text-zinc-50 text-xs">
+                      <span>Grand Total:</span>
+                      <span>Rp {Number(latestTx.Total_Harga || 0).toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="flex justify-between text-zinc-500 dark:text-zinc-400">
+                      <span>Metode Bayar:</span>
+                      <span className="font-bold">{latestTx.Metode_Bayar || 'TUNAI'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Bayar:</span>
+                      <span>Rp {Number(latestTx.Bayar || 0).toLocaleString('id-ID')}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-emerald-600 dark:text-emerald-500">
+                      <span>Kembali:</span>
+                      <span>Rp {Number(latestTx.Kembali || 0).toLocaleString('id-ID')}</span>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-dashed border-zinc-300 dark:border-zinc-700 my-2"></div>
+
+                  <div className="text-center text-[10px] text-zinc-500 dark:text-zinc-400 mt-2 space-y-1">
+                    <p className="leading-tight">{settings?.pesanFooter || 'Terima Kasih Atas Kunjungan Anda!'}</p>
+                    <p className="text-[8px] tracking-wider text-zinc-400">support system By PGW</p>
+                  </div>
                 </div>
               </div>
 

@@ -240,7 +240,7 @@ export async function printBluetoothReceipt(
     // 5. Footer (Centered)
     chunks.push(CENTER);
     chunks.push(encoder.encode(settings.pesanFooter + '\n'));
-    chunks.push(encoder.encode('Diberdayakan oleh Maissy Coffee POS\n'));
+    chunks.push(encoder.encode('support system By PGW\n'));
     
     // 6. Paper Feed & Cut
     // Feed 4 lines of paper
