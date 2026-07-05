@@ -181,21 +181,35 @@ export default function ReportView({ currentUser }: ReportViewProps) {
   const openPrintWindow = (txId: string, paperSize: string = '80') => {
     const url = `/api/receipt/${txId}/print?paperSize=${paperSize}`;
     
-    // Using window.open with only '_blank' avoids modern browser popup blockers
-    // because it opens as a standard new tab instead of a popup window.
-    const win = window.open(url, '_blank');
-    if (win) {
-      win.focus();
-    } else {
-      console.log('Popup blocked, trying programmatic anchor click...');
-      const link = document.createElement('a');
-      link.href = url;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    // Check if iframe already exists, if not create one
+    let iframe = document.getElementById('print-iframe-silent') as HTMLIFrameElement;
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.id = 'print-iframe-silent';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.style.pointerEvents = 'none';
+      document.body.appendChild(iframe);
     }
+    
+    iframe.src = url;
+    
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (err) {
+        console.error('Failed to print from iframe, falling back to new tab:', err);
+        const win = window.open(url, '_blank');
+        if (win) {
+          win.focus();
+        }
+      }
+    };
   };
 
   // Filter Logic

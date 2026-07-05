@@ -155,3 +155,35 @@ export async function syncFullDatabase(db: any) {
   await Promise.all(promises);
   console.log('[Firestore] Full database sync complete.');
 }
+
+/**
+ * Sets up a real-time listener on Firestore collections to propagate cloud changes
+ * to all running backend instances and synchronize user sessions.
+ */
+export function setupFirestoreListeners(
+  onUpdate: (col: string, items: any[]) => void,
+  onSettingsUpdate: (settings: any) => void
+) {
+  console.log('[Firestore Listener] Setting up real-time collection listeners...');
+  const collections = ['users', 'menus', 'transactions', 'transaction_details', 'activity_log'];
+  
+  collections.forEach(col => {
+    firestore.collection(col).onSnapshot(snapshot => {
+      const list: any[] = [];
+      snapshot.forEach(doc => {
+        list.push(doc.data());
+      });
+      onUpdate(col, list);
+    }, error => {
+      console.error(`[Firestore Listener] Error listening to '${col}':`, error);
+    });
+  });
+
+  firestore.collection('settings').doc('global').onSnapshot(docSnap => {
+    if (docSnap.exists) {
+      onSettingsUpdate(docSnap.data());
+    }
+  }, error => {
+    console.error(`[Firestore Listener] Error listening to settings:`, error);
+  });
+}

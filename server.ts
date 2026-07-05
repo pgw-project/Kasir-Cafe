@@ -10,7 +10,7 @@ import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer as createViteServer } from 'vite';
 import { User, Menu, Transaction, TransactionDetail, ActivityLog, Settings } from './src/types.js';
-import { loadFromFirestore, syncCollection, syncFullDatabase } from './firebase-server.js';
+import { loadFromFirestore, syncCollection, syncFullDatabase, setupFirestoreListeners } from './firebase-server.js';
 
 const DB_PATH = path.join(process.cwd(), 'database.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
@@ -357,7 +357,7 @@ function readDB() {
 }
 
 // Write database helper
-function writeDB(data: any, resource?: string) {
+function writeDB(data: any, resource?: string | string[]) {
   try {
     globalDb = data;
     // Write local backup file synchronously
@@ -365,10 +365,12 @@ function writeDB(data: any, resource?: string) {
 
     // Asynchronously synchronize changes to Firestore
     if (resource) {
-      const syncKey = resource;
-      const colData = resource === 'settings' ? data.settings : data[resource];
-      syncCollection(syncKey, colData).catch(err => {
-        console.error(`[Firestore] Failed to async sync collection '${syncKey}':`, err);
+      const resources = Array.isArray(resource) ? resource : [resource];
+      resources.forEach(resKey => {
+        const colData = resKey === 'settings' ? data.settings : data[resKey];
+        syncCollection(resKey, colData).catch(err => {
+          console.error(`[Firestore] Failed to async sync collection '${resKey}':`, err);
+        });
       });
     } else {
       syncFullDatabase(data).catch(err => {
@@ -378,7 +380,7 @@ function writeDB(data: any, resource?: string) {
 
     broadcastToAll({
       type: 'db_update',
-      resource: resource || 'all',
+      resource: Array.isArray(resource) ? 'all' : (resource || 'all'),
       timestamp: Date.now()
     });
     return true;
@@ -452,6 +454,42 @@ async function startServer() {
   initDatabase().catch(err => {
     console.error('[Database] Background database initialization failed:', err);
   });
+
+  // Setup real-time listeners to keep globalDb up-to-date across all server instances
+  setupFirestoreListeners(
+    (col, items) => {
+      if (!globalDb) {
+        globalDb = getInitialData();
+      }
+      globalDb[col] = items;
+      try {
+        fs.writeFileSync(DB_PATH, JSON.stringify(globalDb, null, 2), 'utf-8');
+      } catch (e) {
+        console.error('[Firestore Listener] Error writing local DB backup:', e);
+      }
+      broadcastToAll({
+        type: 'db_update',
+        resource: col,
+        timestamp: Date.now()
+      });
+    },
+    (settings) => {
+      if (!globalDb) {
+        globalDb = getInitialData();
+      }
+      globalDb.settings = settings;
+      try {
+        fs.writeFileSync(DB_PATH, JSON.stringify(globalDb, null, 2), 'utf-8');
+      } catch (e) {
+        console.error('[Firestore Listener] Error writing local DB backup settings:', e);
+      }
+      broadcastToAll({
+        type: 'db_update',
+        resource: 'settings',
+        timestamp: Date.now()
+      });
+    }
+  );
 
   // --- API ROUTES ---
 
@@ -1264,7 +1302,7 @@ async function startServer() {
       Description: `Transaksi ${txId} berhasil dibuat untuk Pelanggan: ${namaPelanggan}. Total: Rp ${totalHarga.toLocaleString('id-ID')}`,
     });
 
-    writeDB(db);
+    writeDB(db, ['transactions', 'transaction_details', 'activity_log']);
     res.json({ success: true, transaction: newTx, details: newDetails });
   });
 
