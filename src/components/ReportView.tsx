@@ -7,7 +7,6 @@ import React, { useState, useEffect } from 'react';
 import { Search, Calendar, FileText, Download, Printer, Filter, ChevronLeft, ChevronRight, X, Bluetooth } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Transaction, TransactionDetail, Menu } from '../types.js';
-import PrintPreviewModal from './PrintPreviewModal.js';
 import { 
   connectPrinter, 
   disconnectPrinter, 
@@ -39,7 +38,6 @@ export default function ReportView({ currentUser }: ReportViewProps) {
   // Print format dialog state
   const [isPrintOptionOpen, setIsPrintOptionOpen] = useState(false);
   const [printTxId, setPrintTxId] = useState('');
-  const [activePrintPreview, setActivePrintPreview] = useState<{ txId: string; size: '58' | '80' | 'A4' } | null>(null);
 
   // Bluetooth Printer states
   const [btStatus, setBtStatus] = useState<{ connected: boolean; name?: string }>({ connected: false });
@@ -181,10 +179,13 @@ export default function ReportView({ currentUser }: ReportViewProps) {
   }, []);
 
   const openPrintWindow = (txId: string, paperSize: string = '80') => {
-    setActivePrintPreview({
-      txId,
-      size: paperSize as '58' | '80' | 'A4'
-    });
+    const url = `/api/receipt/${txId}/print?paperSize=${paperSize}`;
+    const win = window.open(url, '_blank', 'width=400,height=600');
+    if (win) {
+      win.focus();
+    } else {
+      alert('Popup diblokir! Izinkan popup untuk memprint struk.');
+    }
   };
 
   // Filter Logic
@@ -729,14 +730,6 @@ export default function ReportView({ currentUser }: ReportViewProps) {
             </div>
           </div>
         </div>
-      )}
-
-      {activePrintPreview && (
-        <PrintPreviewModal
-          txId={activePrintPreview.txId}
-          paperSize={activePrintPreview.size}
-          onClose={() => setActivePrintPreview(null)}
-        />
       )}
     </div>
   );

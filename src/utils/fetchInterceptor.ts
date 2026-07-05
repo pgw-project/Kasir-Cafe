@@ -55,19 +55,41 @@ if (!window.__originalFetch) {
       try {
         const originalResponse = await window.__originalFetch!(input, init);
 
-        // Check if response is HTML or 404
+        // If the server returns a 404 for an API route, or if the response content is HTML 
+        // (which indicates SPA fallback/index.html instead of valid JSON), it means
+        // the custom Express backend is not running properly, or we are in a static/proxy
+        // environment. We fallback to the direct client-side Firestore Mode.
         const contentType = originalResponse.headers.get('content-type');
         const isHtmlResponse = contentType && contentType.includes('text/html');
 
         if (originalResponse.status === 404 || isHtmlResponse) {
-          console.warn(`[Fetch Interceptor] Express API returned ${originalResponse.status} ${isHtmlResponse ? '(HTML response detected)' : ''}.`);
+          console.warn(`[Fetch Interceptor] Express API returned ${originalResponse.status} ${isHtmlResponse ? '(HTML response detected)' : ''}. Switching to direct client-side Firestore Mode!`);
+          
+          // Activate the fallback
+          window.__useClientFirebase = true;
+          localStorage.setItem('forceClientFirebase', 'true');
+
+          // Handle the request directly
+          const res = await clientFirebaseRouter.handleRequest(cleanPath, init?.method || 'GET', init?.body ? JSON.parse(init.body as string) : null);
+          return makeMockResponse(res.status, res.data);
         }
 
         return originalResponse;
       } catch (networkError: any) {
         // If there's a connection error (Server is offline / Refused connection / Timeout / DNS error)
-        console.error('[Fetch Interceptor] Network connection failed:', networkError);
-        throw networkError;
+        console.warn('[Fetch Interceptor] Network connection failed. Switching to direct client-side Firestore Mode!', networkError);
+        
+        // Activate the fallback
+        window.__useClientFirebase = true;
+        localStorage.setItem('forceClientFirebase', 'true');
+
+        // Handle the request directly
+        try {
+          const res = await clientFirebaseRouter.handleRequest(cleanPath, init?.method || 'GET', init?.body ? JSON.parse(init.body as string) : null);
+          return makeMockResponse(res.status, res.data);
+        } catch (fallbackError: any) {
+          return makeMockResponse(500, { success: false, message: 'Fallback to direct client-side Firestore failed' });
+        }
       }
     }
 

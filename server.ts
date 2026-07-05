@@ -10,7 +10,7 @@ import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer as createViteServer } from 'vite';
 import { User, Menu, Transaction, TransactionDetail, ActivityLog, Settings } from './src/types.js';
-import { loadFromFirestore, syncCollection, syncFullDatabase, setupFirestoreListeners } from './firebase-server.js';
+import { loadFromFirestore, syncCollection, syncFullDatabase } from './firebase-server.js';
 
 const DB_PATH = path.join(process.cwd(), 'database.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
@@ -357,7 +357,7 @@ function readDB() {
 }
 
 // Write database helper
-function writeDB(data: any, resource?: string | string[]) {
+function writeDB(data: any, resource?: string) {
   try {
     globalDb = data;
     // Write local backup file synchronously
@@ -365,12 +365,10 @@ function writeDB(data: any, resource?: string | string[]) {
 
     // Asynchronously synchronize changes to Firestore
     if (resource) {
-      const resources = Array.isArray(resource) ? resource : [resource];
-      resources.forEach(resKey => {
-        const colData = resKey === 'settings' ? data.settings : data[resKey];
-        syncCollection(resKey, colData).catch(err => {
-          console.error(`[Firestore] Failed to async sync collection '${resKey}':`, err);
-        });
+      const syncKey = resource;
+      const colData = resource === 'settings' ? data.settings : data[resource];
+      syncCollection(syncKey, colData).catch(err => {
+        console.error(`[Firestore] Failed to async sync collection '${syncKey}':`, err);
       });
     } else {
       syncFullDatabase(data).catch(err => {
@@ -380,7 +378,7 @@ function writeDB(data: any, resource?: string | string[]) {
 
     broadcastToAll({
       type: 'db_update',
-      resource: Array.isArray(resource) ? 'all' : (resource || 'all'),
+      resource: resource || 'all',
       timestamp: Date.now()
     });
     return true;
@@ -454,42 +452,6 @@ async function startServer() {
   initDatabase().catch(err => {
     console.error('[Database] Background database initialization failed:', err);
   });
-
-  // Setup real-time listeners to keep globalDb up-to-date across all server instances
-  setupFirestoreListeners(
-    (col, items) => {
-      if (!globalDb) {
-        globalDb = getInitialData();
-      }
-      globalDb[col] = items;
-      try {
-        fs.writeFileSync(DB_PATH, JSON.stringify(globalDb, null, 2), 'utf-8');
-      } catch (e) {
-        console.error('[Firestore Listener] Error writing local DB backup:', e);
-      }
-      broadcastToAll({
-        type: 'db_update',
-        resource: col,
-        timestamp: Date.now()
-      });
-    },
-    (settings) => {
-      if (!globalDb) {
-        globalDb = getInitialData();
-      }
-      globalDb.settings = settings;
-      try {
-        fs.writeFileSync(DB_PATH, JSON.stringify(globalDb, null, 2), 'utf-8');
-      } catch (e) {
-        console.error('[Firestore Listener] Error writing local DB backup settings:', e);
-      }
-      broadcastToAll({
-        type: 'db_update',
-        resource: 'settings',
-        timestamp: Date.now()
-      });
-    }
-  );
 
   // --- API ROUTES ---
 
@@ -1302,34 +1264,8 @@ async function startServer() {
       Description: `Transaksi ${txId} berhasil dibuat untuk Pelanggan: ${namaPelanggan}. Total: Rp ${totalHarga.toLocaleString('id-ID')}`,
     });
 
-    writeDB(db, ['transactions', 'transaction_details', 'activity_log']);
+    writeDB(db);
     res.json({ success: true, transaction: newTx, details: newDetails });
-  });
-
-  // API to get receipt data for client-side print preview
-  app.get('/api/receipt/:id/data', (req, res) => {
-    const { id } = req.params;
-    const db = readDB();
-    const tx = db.transactions.find((t: Transaction) => t.ID_Transaksi === id);
-    if (!tx) {
-      return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan.' });
-    }
-    const details = db.transaction_details.filter((d: TransactionDetail) => d.ID_Transaksi === id);
-    
-    let settings = { ...db.settings };
-    if (tx.cafeId) {
-      const txCafe = db.settings.cafes?.find((c: any) => c.id === tx.cafeId);
-      if (txCafe) {
-        settings = {
-          ...settings,
-          namaToko: txCafe.namaToko,
-          alamat: txCafe.alamat,
-          telepon: txCafe.telepon,
-          pesanFooter: txCafe.pesanFooter,
-        };
-      }
-    }
-    res.json({ success: true, transaction: tx, details, settings });
   });
 
   // Receipts Renderer: printable thermal layout
@@ -1436,9 +1372,9 @@ async function startServer() {
           <button class="no-print-btn" onclick="window.print()">Cetak Struk (PDF)</button>
         </div>
         <div class="header text-center">
-          <p class="title">${settings.namaToko || 'Maissy Coffee'}</p>
-          <p style="margin: 3px 0;">${settings.alamat || ''}</p>
-          <p style="margin: 3px 0;">Telp: ${settings.telepon || '-'}</p>
+          <p class="title">${settings.namaToko}</p>
+          <p style="margin: 3px 0;">${settings.alamat}</p>
+          <p style="margin: 3px 0;">Telp: ${settings.telepon}</p>
         </div>
         
         <div class="divider"></div>
@@ -1447,18 +1383,11 @@ async function startServer() {
           <table>
             <tr>
               <td>No: ${tx.ID_Transaksi}</td>
-              <td class="text-right">Kasir: ${tx.Kasir || 'Kasir'}</td>
+              <td class="text-right">Kasir: ${tx.Kasir}</td>
             </tr>
             <tr>
-              <td>Tgl: ${(() => {
-                try {
-                  const d = new Date(tx.Tanggal);
-                  return isNaN(d.getTime()) ? '-' : d.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' });
-                } catch (e) {
-                  return '-';
-                }
-              })()}</td>
-              <td class="text-right">Cust: ${tx.Nama_Pelanggan || '-'}</td>
+              <td>Tgl: ${new Date(tx.Tanggal).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</td>
+              <td class="text-right">Cust: ${tx.Nama_Pelanggan}</td>
             </tr>
           </table>
         </div>
@@ -1469,11 +1398,11 @@ async function startServer() {
           <tbody>
             ${details.map((item: TransactionDetail) => `
               <tr>
-                <td colspan="2">${item.Nama_Menu || ''}</td>
+                <td colspan="2">${item.Nama_Menu}</td>
               </tr>
               <tr>
-                <td style="padding-left: 10px;">${item.Qty || 0} x Rp ${Number(item.Harga_Satuan || 0).toLocaleString('id-ID')}</td>
-                <td class="text-right">Rp ${Number(item.Subtotal || 0).toLocaleString('id-ID')}</td>
+                <td style="padding-left: 10px;">${item.Qty} x Rp ${item.Harga_Satuan.toLocaleString('id-ID')}</td>
+                <td class="text-right">Rp ${item.Subtotal.toLocaleString('id-ID')}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -1484,11 +1413,11 @@ async function startServer() {
         <table>
           <tr>
             <td>Total Item:</td>
-            <td class="text-right">${tx.Total_Item || 0}</td>
+            <td class="text-right">${tx.Total_Item}</td>
           </tr>
           <tr style="font-weight: bold;">
             <td>Grand Total:</td>
-            <td class="text-right">Rp ${Number(tx.Total_Harga || 0).toLocaleString('id-ID')}</td>
+            <td class="text-right">Rp ${tx.Total_Harga.toLocaleString('id-ID')}</td>
           </tr>
           <tr>
             <td>Metode Bayar:</td>
@@ -1496,11 +1425,11 @@ async function startServer() {
           </tr>
           <tr>
             <td>Bayar:</td>
-            <td class="text-right">Rp ${Number(tx.Bayar || 0).toLocaleString('id-ID')}</td>
+            <td class="text-right">Rp ${tx.Bayar.toLocaleString('id-ID')}</td>
           </tr>
           <tr>
             <td>Kembali:</td>
-            <td class="text-right">Rp ${Number(tx.Kembali || 0).toLocaleString('id-ID')}</td>
+            <td class="text-right">Rp ${tx.Kembali.toLocaleString('id-ID')}</td>
           </tr>
         </table>
         
@@ -1514,11 +1443,7 @@ async function startServer() {
         <script>
           // Auto trigger print in printable preview mode
           window.onload = function() {
-            try {
-              window.print();
-            } catch (e) {
-              console.error('Auto print failed:', e);
-            }
+            // Optional auto print if inside iframe
           }
         </script>
       </body>

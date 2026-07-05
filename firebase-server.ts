@@ -1,5 +1,5 @@
-import { initializeApp, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { initializeApp, getApps, App } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import fs from 'fs';
 import path from 'path';
 
@@ -7,24 +7,57 @@ import path from 'path';
 const configPath = path.join(process.cwd(), 'firebase-applet-config.json');
 let firebaseConfig: any = {};
 try {
-  firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+  if (fs.existsSync(configPath)) {
+    firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+  } else {
+    console.warn('[Firebase Server] firebase-applet-config.json not found, using environment variables.');
+  }
 } catch (error) {
-  console.error('Error reading firebase-applet-config.json:', error);
+  console.error('[Firebase Server] Error reading firebase-applet-config.json:', error);
 }
 
-// Initialize Firebase Admin SDK
-const adminApp = getApps().length === 0 ? initializeApp({
-  projectId: firebaseConfig.projectId,
-}) : getApps()[0];
+// Initialize Firebase Admin SDK safely
+let adminApp: App | null = null;
+let firestore: Firestore | null = null;
 
-// Get reference to Firestore database instance
-export const firestore = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId || undefined);
+try {
+  const existingApps = getApps();
+  if (existingApps.length > 0) {
+    adminApp = existingApps[0];
+  } else {
+    // Check if we have project ID configured or let Firebase find it via environment variables
+    if (firebaseConfig.projectId) {
+      adminApp = initializeApp({
+        projectId: firebaseConfig.projectId,
+      });
+      console.log('[Firebase Server] Initialized successfully with config project ID:', firebaseConfig.projectId);
+    } else {
+      // Allow fallback to default/server credentials without throwing error
+      adminApp = initializeApp();
+      console.log('[Firebase Server] Initialized successfully with Application Default Credentials.');
+    }
+  }
+
+  if (adminApp) {
+    firestore = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId || undefined);
+    console.log('[Firebase Server] Firestore instance initialized successfully.');
+  }
+} catch (error) {
+  console.error('[Firebase Server] Failed to initialize Firebase Admin SDK. Server will run in LOCAL database mode:', error);
+}
+
+export { firestore };
 
 /**
  * Loads all data from Firestore collections with a fast-failing timeout.
  * Returns null if the collections are empty or unreachable, so we can fallback to local data or seed initial data.
  */
 export async function loadFromFirestore() {
+  if (!firestore) {
+    console.warn('[Firestore] Firestore is not initialized. Skipping cloud fetch (local database mode)...');
+    return null;
+  }
+  
   console.log('[Firestore] Fetching data from cloud Firestore...');
   
   const fetchPromise = async () => {
@@ -33,7 +66,7 @@ export async function loadFromFirestore() {
     let totalDocs = 0;
 
     for (const col of collections) {
-      const snapshot = await firestore.collection(col).get();
+      const snapshot = await firestore!.collection(col).get();
       const list: any[] = [];
       snapshot.forEach(doc => {
         list.push(doc.data());
@@ -44,7 +77,7 @@ export async function loadFromFirestore() {
     }
 
     // Load settings
-    const settingsDoc = await firestore.collection('settings').doc('global').get();
+    const settingsDoc = await firestore!.collection('settings').doc('global').get();
     if (settingsDoc.exists) {
       result['settings'] = settingsDoc.data();
       totalDocs++;
@@ -79,6 +112,11 @@ export async function loadFromFirestore() {
  * Synchronizes an in-memory collection with Firestore by adding/updating current items and deleting orphans.
  */
 export async function syncCollection(col: string, newItems: any[]) {
+  if (!firestore) {
+    console.warn(`[Firestore] Firestore is not initialized. Skipping sync of collection '${col}'`);
+    return;
+  }
+  
   try {
     if (col === 'settings') {
       await firestore.collection('settings').doc('global').set(newItems);
@@ -143,6 +181,11 @@ export async function syncCollection(col: string, newItems: any[]) {
  * Syncs the entire database object to Firestore in parallel batches.
  */
 export async function syncFullDatabase(db: any) {
+  if (!firestore) {
+    console.warn('[Firestore] Firestore is not initialized. Skipping full database sync...');
+    return;
+  }
+  
   console.log('[Firestore] Syncing full database to cloud...');
   const promises = [
     syncCollection('users', db.users || []),
@@ -154,36 +197,4 @@ export async function syncFullDatabase(db: any) {
   ];
   await Promise.all(promises);
   console.log('[Firestore] Full database sync complete.');
-}
-
-/**
- * Sets up a real-time listener on Firestore collections to propagate cloud changes
- * to all running backend instances and synchronize user sessions.
- */
-export function setupFirestoreListeners(
-  onUpdate: (col: string, items: any[]) => void,
-  onSettingsUpdate: (settings: any) => void
-) {
-  console.log('[Firestore Listener] Setting up real-time collection listeners...');
-  const collections = ['users', 'menus', 'transactions', 'transaction_details', 'activity_log'];
-  
-  collections.forEach(col => {
-    firestore.collection(col).onSnapshot(snapshot => {
-      const list: any[] = [];
-      snapshot.forEach(doc => {
-        list.push(doc.data());
-      });
-      onUpdate(col, list);
-    }, error => {
-      console.error(`[Firestore Listener] Error listening to '${col}':`, error);
-    });
-  });
-
-  firestore.collection('settings').doc('global').onSnapshot(docSnap => {
-    if (docSnap.exists) {
-      onSettingsUpdate(docSnap.data());
-    }
-  }, error => {
-    console.error(`[Firestore Listener] Error listening to settings:`, error);
-  });
 }
