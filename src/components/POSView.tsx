@@ -271,34 +271,21 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
 
   const openPrintWindow = (txId: string, paperSize: string = '80') => {
     const url = `/api/receipt/${txId}/print?paperSize=${paperSize}`;
-    const win = window.open(url, '_blank', 'width=400,height=600');
+    
+    // Using window.open with only '_blank' avoids modern browser popup blockers
+    // because it opens as a standard new tab instead of a popup window.
+    const win = window.open(url, '_blank');
     if (win) {
       win.focus();
     } else {
-      console.log('Popup blocked, attempting iframe direct print...');
-      let iframe = document.getElementById('print-iframe-fallback') as HTMLIFrameElement;
-      if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.id = 'print-iframe-fallback';
-        iframe.style.position = 'fixed';
-        iframe.style.right = '0';
-        iframe.style.bottom = '0';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = 'none';
-        iframe.style.visibility = 'hidden';
-        document.body.appendChild(iframe);
-      }
-      iframe.src = url;
-      iframe.onload = () => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch (err) {
-          console.error('Failed to print from fallback iframe:', err);
-          alert('Popup diblokir! Silakan izinkan popup di browser Anda atau buka aplikasi di tab baru untuk mencetak.');
-        }
-      };
+      console.log('Popup blocked, trying programmatic anchor click...');
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 

@@ -1450,7 +1450,11 @@ async function startServer() {
         <script>
           // Auto trigger print in printable preview mode
           window.onload = function() {
-            // Optional auto print if inside iframe
+            try {
+              window.print();
+            } catch (e) {
+              console.error('Auto print failed:', e);
+            }
           }
         </script>
       </body>
