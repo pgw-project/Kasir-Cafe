@@ -1306,6 +1306,32 @@ async function startServer() {
     res.json({ success: true, transaction: newTx, details: newDetails });
   });
 
+  // API to get receipt data for client-side print preview
+  app.get('/api/receipt/:id/data', (req, res) => {
+    const { id } = req.params;
+    const db = readDB();
+    const tx = db.transactions.find((t: Transaction) => t.ID_Transaksi === id);
+    if (!tx) {
+      return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan.' });
+    }
+    const details = db.transaction_details.filter((d: TransactionDetail) => d.ID_Transaksi === id);
+    
+    let settings = { ...db.settings };
+    if (tx.cafeId) {
+      const txCafe = db.settings.cafes?.find((c: any) => c.id === tx.cafeId);
+      if (txCafe) {
+        settings = {
+          ...settings,
+          namaToko: txCafe.namaToko,
+          alamat: txCafe.alamat,
+          telepon: txCafe.telepon,
+          pesanFooter: txCafe.pesanFooter,
+        };
+      }
+    }
+    res.json({ success: true, transaction: tx, details, settings });
+  });
+
   // Receipts Renderer: printable thermal layout
   app.get('/api/receipt/:id/print', (req, res) => {
     const { id } = req.params;

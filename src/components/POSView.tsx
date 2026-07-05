@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, CheckCircle, Printer, X, QrCode, Banknote, FileText, Bluetooth, Wifi } from 'lucide-react';
 import { Menu } from '../types.js';
+import PrintPreviewModal from './PrintPreviewModal.js';
 import { 
   connectPrinter, 
   disconnectPrinter, 
@@ -45,6 +46,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
   const [metodeBayar, setMetodeBayar] = useState<'TUNAI' | 'QRIS'>('TUNAI');
   const [isPrintOptionOpen, setIsPrintOptionOpen] = useState(false);
   const [printTxId, setPrintTxId] = useState('');
+  const [activePrintPreview, setActivePrintPreview] = useState<{ txId: string; size: '58' | '80' | 'A4' } | null>(null);
   
   // Success Modal State
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
@@ -270,37 +272,10 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
   };
 
   const openPrintWindow = (txId: string, paperSize: string = '80') => {
-    const url = `/api/receipt/${txId}/print?paperSize=${paperSize}`;
-    
-    // Check if iframe already exists, if not create one
-    let iframe = document.getElementById('print-iframe-silent') as HTMLIFrameElement;
-    if (!iframe) {
-      iframe = document.createElement('iframe');
-      iframe.id = 'print-iframe-silent';
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = 'none';
-      iframe.style.pointerEvents = 'none';
-      document.body.appendChild(iframe);
-    }
-    
-    iframe.src = url;
-    
-    iframe.onload = () => {
-      try {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      } catch (err) {
-        console.error('Failed to print from iframe, falling back to new tab:', err);
-        const win = window.open(url, '_blank');
-        if (win) {
-          win.focus();
-        }
-      }
-    };
+    setActivePrintPreview({
+      txId,
+      size: paperSize as '58' | '80' | 'A4'
+    });
   };
 
   return (
@@ -1039,6 +1014,14 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {activePrintPreview && (
+        <PrintPreviewModal
+          txId={activePrintPreview.txId}
+          paperSize={activePrintPreview.size}
+          onClose={() => setActivePrintPreview(null)}
+        />
       )}
     </div>
   );
