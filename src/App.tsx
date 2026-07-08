@@ -974,7 +974,11 @@ export default function App() {
                           {msg.message}
                         </div>
                         <span className="text-[8px] text-zinc-400/80 dark:text-zinc-500/80 mt-0.5 px-1">
-                          {new Date(msg.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                          {(() => {
+                            if (!msg.timestamp) return '';
+                            const d = new Date(msg.timestamp);
+                            return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                          })()}
                         </span>
                       </div>
                     );

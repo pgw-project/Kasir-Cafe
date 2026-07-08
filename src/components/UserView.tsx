@@ -422,7 +422,11 @@ export default function UserView({ currentUser }: UserViewProps) {
 
                   {/* Created At */}
                   <td className="px-6 py-4 text-zinc-400 dark:text-zinc-500 font-mono">
-                    {new Date(u.Created_At).toLocaleDateString('id-ID', { dateStyle: 'medium' })}
+                    {(() => {
+                      if (!u.Created_At) return '-';
+                      const d = new Date(u.Created_At);
+                      return isNaN(d.getTime()) ? '-' : d.toLocaleDateString('id-ID', { dateStyle: 'medium' });
+                    })()}
                   </td>
 
                   {/* Admin toggles */}

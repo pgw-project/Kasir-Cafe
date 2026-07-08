@@ -145,7 +145,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
           </div>
           <div className="mt-4">
             <h3 className="text-2xl font-bold text-zinc-950 dark:text-zinc-50">
-              Rp {summary.todaySales.toLocaleString('id-ID')}
+              Rp {(summary?.todaySales || 0).toLocaleString('id-ID')}
             </h3>
             <div className="flex items-center gap-2 mt-2">
               <TrendingUp className="h-4 w-4 text-emerald-500" />
@@ -224,7 +224,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
           <div className="mt-4">
             <h3 className="text-2xl font-bold text-zinc-950 dark:text-zinc-50">
               {currentUser?.Role === 'admin' 
-                ? `Rp ${summary.totalSalesEver.toLocaleString('id-ID')}`
+                ? `Rp ${(summary?.totalSalesEver || 0).toLocaleString('id-ID')}`
                 : (currentUser?.Nama || 'Kasir')}
             </h3>
             <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">
@@ -391,7 +391,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
                       <span className="text-zinc-600 dark:text-zinc-400">{cat.name}</span>
                     </div>
                     <div className="text-zinc-900 dark:text-zinc-200">
-                      Rp {cat.value.toLocaleString('id-ID')} <span className="text-[10px] text-zinc-400 ml-1">({percent}%)</span>
+                      Rp {(cat.value || 0).toLocaleString('id-ID')} <span className="text-[10px] text-zinc-400 ml-1">({percent}%)</span>
                     </div>
                   </div>
                 );
@@ -451,7 +451,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
                       <span className="text-zinc-800 dark:text-zinc-200">{item.name}</span>
                     </div>
                     <span className="text-zinc-500 dark:text-zinc-400 font-mono">
-                      {item.qty} pcs <span className="text-[10px] text-zinc-400 ml-1">(Rp {item.total.toLocaleString('id-ID')})</span>
+                      {item.qty} pcs <span className="text-[10px] text-zinc-400 ml-1">(Rp {(item.total || 0).toLocaleString('id-ID')})</span>
                     </span>
                   </div>
                   {/* Custom progress line */}

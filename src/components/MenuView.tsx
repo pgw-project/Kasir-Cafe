@@ -345,7 +345,7 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                     </span>
                   </td>
                   <td className="px-6 py-4 font-mono text-zinc-900 dark:text-zinc-100 font-bold">
-                    Rp {menu.Harga.toLocaleString('id-ID')}
+                    Rp {(menu?.Harga || 0).toLocaleString('id-ID')}
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide

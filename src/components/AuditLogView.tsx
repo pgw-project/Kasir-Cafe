@@ -124,7 +124,11 @@ export default function AuditLogView() {
                     <tr key={idx} className="hover:bg-zinc-50/50 dark:hover:bg-[#25201c]/30 transition">
                       {/* Timestamp */}
                       <td className="px-6 py-4 font-mono text-zinc-400 dark:text-zinc-500">
-                        {new Date(log.Timestamp).toLocaleString('id-ID')}
+                        {(() => {
+                          if (!log.Timestamp) return '-';
+                          const d = new Date(log.Timestamp);
+                          return isNaN(d.getTime()) ? '-' : d.toLocaleString('id-ID');
+                        })()}
                       </td>
                       {/* User */}
                       <td className="px-6 py-4">

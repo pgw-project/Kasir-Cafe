@@ -273,7 +273,11 @@ export default function ReportView({ currentUser }: ReportViewProps) {
 
     // Format data into rows suitable for the sheet
     const dataRows = filteredTransactions.map((tx) => {
-      const dateFormatted = tx.Tanggal ? new Date(tx.Tanggal).toLocaleString('id-ID') : '';
+      const dateFormatted = (() => {
+        if (!tx.Tanggal) return '';
+        const d = new Date(tx.Tanggal);
+        return isNaN(d.getTime()) ? '' : d.toLocaleString('id-ID');
+      })();
       const counts = getTransactionItemCounts(tx.ID_Transaksi);
       return {
         'ID Transaksi': tx.ID_Transaksi || '',
@@ -345,7 +349,7 @@ export default function ReportView({ currentUser }: ReportViewProps) {
         <div className="p-5 rounded-2xl bg-white dark:bg-[#1a1613] border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm">
           <span className="text-[10px] font-bold text-zinc-400 tracking-wider uppercase">Omzet Hasil Filter</span>
           <h4 className="text-xl font-extrabold text-amber-600 dark:text-amber-500 mt-1">
-            Rp {totalOmzetFiltered.toLocaleString('id-ID')}
+            Rp {(totalOmzetFiltered || 0).toLocaleString('id-ID')}
           </h4>
         </div>
         <div className="p-5 rounded-2xl bg-white dark:bg-[#1a1613] border border-zinc-200/80 dark:border-zinc-800/80 shadow-sm">
@@ -500,7 +504,11 @@ export default function ReportView({ currentUser }: ReportViewProps) {
                     <tr key={tx.ID_Transaksi} className="hover:bg-zinc-50/50 dark:hover:bg-[#25201c]/30 transition">
                       <td className="px-6 py-4 font-mono text-amber-600 dark:text-amber-500 font-bold">{tx.ID_Transaksi}</td>
                       <td className="px-6 py-4 font-mono text-zinc-400 dark:text-zinc-500">
-                        {new Date(tx.Tanggal).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
+                        {(() => {
+                          if (!tx.Tanggal) return '-';
+                          const d = new Date(tx.Tanggal);
+                          return isNaN(d.getTime()) ? '-' : d.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' });
+                        })()}
                       </td>
                       <td className="px-6 py-4 font-bold text-zinc-900 dark:text-zinc-100">{tx.Nama_Pelanggan}</td>
                       <td className="px-6 py-4">{tx.Kasir}</td>
@@ -508,7 +516,7 @@ export default function ReportView({ currentUser }: ReportViewProps) {
                       <td className="px-6 py-4 font-mono text-emerald-600 dark:text-emerald-500 font-bold">{counts.makanan} pcs</td>
                       <td className="px-6 py-4 font-mono text-sky-600 dark:text-sky-500 font-bold">{counts.minuman} pcs</td>
                       <td className="px-6 py-4 font-mono text-zinc-950 dark:text-zinc-50 font-bold">
-                        Rp {tx.Total_Harga.toLocaleString('id-ID')}
+                        Rp {(tx.Total_Harga || 0).toLocaleString('id-ID')}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-md text-[10px] font-bold ${

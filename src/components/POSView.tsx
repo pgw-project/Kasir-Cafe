@@ -211,7 +211,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
   const handleCheckoutSubmit = async () => {
     const finalUangBayar = metodeBayar === 'QRIS' ? totalHarga : Number(uangBayar);
     if (finalUangBayar === '' || finalUangBayar < totalHarga) {
-      setErrorCheckout(`Pembayaran kurang! Minimal Rp ${totalHarga.toLocaleString('id-ID')}`);
+      setErrorCheckout(`Pembayaran kurang! Minimal Rp ${(totalHarga || 0).toLocaleString('id-ID')}`);
       return;
     }
 
@@ -376,7 +376,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
 
                 <div className="mt-3 flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-zinc-800/60">
                   <span className="font-extrabold text-sm text-amber-600 dark:text-amber-500">
-                    Rp {menu.Harga.toLocaleString('id-ID')}
+                    Rp {(menu?.Harga || 0).toLocaleString('id-ID')}
                   </span>
                   <div className="h-7 w-7 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-500 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition duration-300">
                     <Plus className="h-4 w-4" />
@@ -445,7 +445,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
                       {item.Nama_Menu}
                     </h5>
                     <span className="text-[10px] text-zinc-400 font-mono">
-                      Rp {item.Harga.toLocaleString('id-ID')} / pcs
+                      Rp {(item?.Harga || 0).toLocaleString('id-ID')} / pcs
                     </span>
                   </div>
 
@@ -491,7 +491,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
             <div className="flex justify-between text-zinc-950 dark:text-zinc-50 text-base pt-1.5 border-t border-dashed border-zinc-100 dark:border-zinc-800">
               <span className="font-bold">Grand Total:</span>
               <span className="font-extrabold text-amber-600 dark:text-amber-500 font-mono">
-                Rp {totalHarga.toLocaleString('id-ID')}
+                Rp {(totalHarga || 0).toLocaleString('id-ID')}
               </span>
             </div>
           </div>
@@ -517,7 +517,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
           <div className="flex flex-col text-left">
             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Total Pesanan</span>
             <span className="text-sm font-extrabold text-amber-600 dark:text-amber-500 font-mono">
-              Rp {totalHarga.toLocaleString('id-ID')}
+              Rp {(totalHarga || 0).toLocaleString('id-ID')}
             </span>
             <span className="text-[10px] text-zinc-500 font-semibold">{totalItem} pcs item</span>
           </div>
@@ -557,7 +557,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
               <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-center">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Harus Dibayar</span>
                 <h4 className="text-2xl font-extrabold text-amber-600 dark:text-amber-500 font-mono mt-0.5">
-                  Rp {totalHarga.toLocaleString('id-ID')}
+                  Rp {(totalHarga || 0).toLocaleString('id-ID')}
                 </h4>
               </div>
 
@@ -665,7 +665,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
                     <div id="checkout-change-panel" className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-between">
                       <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400">Kembalian:</span>
                       <span className="text-lg font-extrabold text-emerald-600 dark:text-emerald-500 font-mono">
-                        Rp {(Number(uangBayar) - totalHarga).toLocaleString('id-ID')}
+                        Rp {Math.max(0, Number(uangBayar || 0) - (totalHarga || 0)).toLocaleString('id-ID')}
                       </span>
                     </div>
                   )}
@@ -691,7 +691,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
                   </div>
 
                   <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed font-semibold">
-                    Tunjukkan QR Code ini kepada pelanggan.<br />Setelah discan dan sukses membayar <strong className="text-amber-600 dark:text-amber-500 font-mono">Rp {totalHarga.toLocaleString('id-ID')}</strong>, klik konfirmasi di bawah.
+                    Tunjukkan QR Code ini kepada pelanggan.<br />Setelah discan dan sukses membayar <strong className="text-amber-600 dark:text-amber-500 font-mono">Rp {(totalHarga || 0).toLocaleString('id-ID')}</strong>, klik konfirmasi di bawah.
                   </p>
                 </div>
               )}

@@ -788,7 +788,7 @@ export const clientFirebaseRouter = {
           Nama_User: actor.Nama,
           Action: 'CHECKOUT',
           Module: 'POS',
-          Description: `Transaksi ${txId} berhasil dibuat untuk Pelanggan: ${namaPelanggan}. Total: Rp ${totalHarga.toLocaleString('id-ID')} (client-side local db)`,
+          Description: `Transaksi ${txId} berhasil dibuat untuk Pelanggan: ${namaPelanggan}. Total: Rp ${(totalHarga || 0).toLocaleString('id-ID')} (client-side local db)`,
         });
         ldb.set('activity_log', logs);
 
@@ -1089,7 +1089,11 @@ export function generateReceiptHtml(tx: Transaction, details: TransactionDetail[
             <td class="text-right">Kasir: ${tx.Kasir}</td>
           </tr>
           <tr>
-            <td>Tgl: ${new Date(tx.Tanggal).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</td>
+            <td>Tgl: ${(() => {
+              if (!tx.Tanggal) return '-';
+              const d = new Date(tx.Tanggal);
+              return isNaN(d.getTime()) ? '-' : d.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' });
+            })()}</td>
             <td class="text-right">Cust: ${tx.Nama_Pelanggan}</td>
           </tr>
         </table>

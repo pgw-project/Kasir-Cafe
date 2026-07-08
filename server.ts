@@ -753,7 +753,7 @@ async function startServer() {
       Nama_User: actor.Nama,
       Action: 'ADD_MENU',
       Module: 'MENU_MANAGEMENT',
-      Description: `Menambahkan menu baru: ${nama} (${kategori}) dengan harga Rp ${Number(harga).toLocaleString('id-ID')}`,
+      Description: `Menambahkan menu baru: ${nama} (${kategori}) dengan harga Rp ${Number(harga || 0).toLocaleString('id-ID')}`,
     });
 
     writeDB(db);
@@ -793,7 +793,7 @@ async function startServer() {
       Nama_User: actor.Nama,
       Action: 'UPDATE_MENU',
       Module: 'MENU_MANAGEMENT',
-      Description: `Mengubah menu ${oldMenu.Nama_Menu}: Harga Rp ${Number(db.menus[menuIndex].Harga).toLocaleString('id-ID')}, Status: ${db.menus[menuIndex].Status}`,
+      Description: `Mengubah menu ${oldMenu.Nama_Menu}: Harga Rp ${Number(db.menus[menuIndex].Harga || 0).toLocaleString('id-ID')}, Status: ${db.menus[menuIndex].Status}`,
     });
 
     writeDB(db);
@@ -1265,7 +1265,7 @@ async function startServer() {
       Nama_User: actor.Nama,
       Action: 'CHECKOUT',
       Module: 'POS',
-      Description: `Transaksi ${txId} berhasil dibuat untuk Pelanggan: ${namaPelanggan}. Total: Rp ${totalHarga.toLocaleString('id-ID')}`,
+      Description: `Transaksi ${txId} berhasil dibuat untuk Pelanggan: ${namaPelanggan}. Total: Rp ${(totalHarga || 0).toLocaleString('id-ID')}`,
     });
 
     writeDB(db);
@@ -1390,7 +1390,11 @@ async function startServer() {
               <td class="text-right">Kasir: ${tx.Kasir}</td>
             </tr>
             <tr>
-              <td>Tgl: ${new Date(tx.Tanggal).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</td>
+              <td>Tgl: ${(() => {
+                if (!tx.Tanggal) return '-';
+                const d = new Date(tx.Tanggal);
+                return isNaN(d.getTime()) ? '-' : d.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' });
+              })()}</td>
               <td class="text-right">Cust: ${tx.Nama_Pelanggan}</td>
             </tr>
           </table>
@@ -1405,8 +1409,8 @@ async function startServer() {
                 <td colspan="2">${item.Nama_Menu}</td>
               </tr>
               <tr>
-                <td style="padding-left: 10px;">${item.Qty} x Rp ${item.Harga_Satuan.toLocaleString('id-ID')}</td>
-                <td class="text-right">Rp ${item.Subtotal.toLocaleString('id-ID')}</td>
+                <td style="padding-left: 10px;">${item.Qty} x Rp ${(item.Harga_Satuan || 0).toLocaleString('id-ID')}</td>
+                <td class="text-right">Rp ${(item.Subtotal || 0).toLocaleString('id-ID')}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -1421,7 +1425,7 @@ async function startServer() {
           </tr>
           <tr style="font-weight: bold;">
             <td>Grand Total:</td>
-            <td class="text-right">Rp ${tx.Total_Harga.toLocaleString('id-ID')}</td>
+            <td class="text-right">Rp ${(tx.Total_Harga || 0).toLocaleString('id-ID')}</td>
           </tr>
           <tr>
             <td>Metode Bayar:</td>
@@ -1429,11 +1433,11 @@ async function startServer() {
           </tr>
           <tr>
             <td>Bayar:</td>
-            <td class="text-right">Rp ${tx.Bayar.toLocaleString('id-ID')}</td>
+            <td class="text-right">Rp ${(tx.Bayar || 0).toLocaleString('id-ID')}</td>
           </tr>
           <tr>
             <td>Kembali:</td>
-            <td class="text-right">Rp ${tx.Kembali.toLocaleString('id-ID')}</td>
+            <td class="text-right">Rp ${(tx.Kembali || 0).toLocaleString('id-ID')}</td>
           </tr>
         </table>
         

@@ -208,7 +208,11 @@ export async function printBluetoothReceipt(
 
     // 2. Transaction Info
     chunks.push(formatRow('No: ' + tx.ID_Transaksi, 'Kasir: ' + tx.Kasir, maxChars));
-    const tglString = new Date(tx.Tanggal).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' });
+    const tglString = (() => {
+      if (!tx.Tanggal) return '-';
+      const d = new Date(tx.Tanggal);
+      return isNaN(d.getTime()) ? '-' : d.toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' });
+    })();
     chunks.push(formatRow('Tgl: ' + tglString, 'Cust: ' + tx.Nama_Pelanggan, maxChars));
     chunks.push(encoder.encode('-'.repeat(maxChars) + '\n'));
 
@@ -218,8 +222,8 @@ export async function printBluetoothReceipt(
       chunks.push(encoder.encode(item.Nama_Menu + '\n'));
       
       // Quantity and prices (left-right row)
-      const qtyPrice = `  ${item.Qty} x Rp ${item.Harga_Satuan.toLocaleString('id-ID')}`;
-      const subtotal = `Rp ${item.Subtotal.toLocaleString('id-ID')}`;
+      const qtyPrice = `  ${item.Qty} x Rp ${(item.Harga_Satuan || 0).toLocaleString('id-ID')}`;
+      const subtotal = `Rp ${(item.Subtotal || 0).toLocaleString('id-ID')}`;
       chunks.push(formatRow(qtyPrice, subtotal, maxChars));
     });
 
@@ -229,12 +233,12 @@ export async function printBluetoothReceipt(
     chunks.push(formatRow('Total Item:', String(tx.Total_Item), maxChars));
     
     chunks.push(BOLD_ON);
-    chunks.push(formatRow('Grand Total:', `Rp ${tx.Total_Harga.toLocaleString('id-ID')}`, maxChars));
+    chunks.push(formatRow('Grand Total:', `Rp ${(tx.Total_Harga || 0).toLocaleString('id-ID')}`, maxChars));
     chunks.push(BOLD_OFF);
     
     chunks.push(formatRow('Metode Bayar:', tx.Metode_Bayar || 'TUNAI', maxChars));
-    chunks.push(formatRow('Bayar:', `Rp ${tx.Bayar.toLocaleString('id-ID')}`, maxChars));
-    chunks.push(formatRow('Kembali:', `Rp ${tx.Kembali.toLocaleString('id-ID')}`, maxChars));
+    chunks.push(formatRow('Bayar:', `Rp ${(tx.Bayar || 0).toLocaleString('id-ID')}`, maxChars));
+    chunks.push(formatRow('Kembali:', `Rp ${(tx.Kembali || 0).toLocaleString('id-ID')}`, maxChars));
     chunks.push(encoder.encode('-'.repeat(maxChars) + '\n'));
 
     // 5. Footer (Centered)
