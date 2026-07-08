@@ -569,6 +569,60 @@ async function startServer() {
   app.get('/api/users', (req, res) => {
     const { userId } = req.query;
     const db = readDB();
+    
+    // Auto-migrate any db.users with lowercase properties
+    let migrated = false;
+    const cleanUsersList = db.users.map((u: any) => {
+      if (!u) return u;
+      const mapped = { ...u };
+      if (mapped.nama !== undefined && mapped.Nama === undefined) {
+        mapped.Nama = mapped.nama;
+        delete mapped.nama;
+        migrated = true;
+      }
+      if (mapped.email !== undefined && mapped.Email === undefined) {
+        mapped.Email = mapped.email;
+        delete mapped.email;
+        migrated = true;
+      }
+      if (mapped.password !== undefined && mapped.Password === undefined) {
+        mapped.Password = mapped.password;
+        delete mapped.password;
+        migrated = true;
+      }
+      if (mapped.role !== undefined && mapped.Role === undefined) {
+        mapped.Role = mapped.role;
+        delete mapped.role;
+        migrated = true;
+      }
+      if (mapped.status !== undefined && mapped.Status === undefined) {
+        mapped.Status = mapped.status;
+        delete mapped.status;
+        migrated = true;
+      }
+      if (mapped.created_at !== undefined && mapped.Created_At === undefined) {
+        mapped.Created_At = mapped.created_at;
+        delete mapped.created_at;
+        migrated = true;
+      }
+      if (mapped.createdAt !== undefined && mapped.Created_At === undefined) {
+        mapped.Created_At = mapped.createdAt;
+        delete mapped.createdAt;
+        migrated = true;
+      }
+      if (mapped.id_user !== undefined && mapped.ID_User === undefined) {
+        mapped.ID_User = mapped.id_user;
+        delete mapped.id_user;
+        migrated = true;
+      }
+      return mapped;
+    });
+
+    if (migrated) {
+      db.users = cleanUsersList;
+      writeDB(db);
+    }
+
     let filteredUsers = db.users;
 
     if (userId) {

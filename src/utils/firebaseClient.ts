@@ -238,43 +238,206 @@ export const clientFirebaseRouter = {
     // 4. CRUD: Users
     if (cleanPath === '/users' && method === 'GET') {
       const ldb = getLocalDb();
-      const users = ldb.get('users') || [];
+      const rawUsers = ldb.get('users') || [];
+      
+      // Auto-migrate any rawUsers with lowercase properties
+      let migrated = false;
+      const cleanUsers = rawUsers.map((u: any) => {
+        if (!u) return u;
+        const mapped = { ...u };
+        if (mapped.nama !== undefined && mapped.Nama === undefined) {
+          mapped.Nama = mapped.nama;
+          delete mapped.nama;
+          migrated = true;
+        }
+        if (mapped.email !== undefined && mapped.Email === undefined) {
+          mapped.Email = mapped.email;
+          delete mapped.email;
+          migrated = true;
+        }
+        if (mapped.password !== undefined && mapped.Password === undefined) {
+          mapped.Password = mapped.password;
+          delete mapped.password;
+          migrated = true;
+        }
+        if (mapped.role !== undefined && mapped.Role === undefined) {
+          mapped.Role = mapped.role;
+          delete mapped.role;
+          migrated = true;
+        }
+        if (mapped.status !== undefined && mapped.Status === undefined) {
+          mapped.Status = mapped.status;
+          delete mapped.status;
+          migrated = true;
+        }
+        if (mapped.created_at !== undefined && mapped.Created_At === undefined) {
+          mapped.Created_At = mapped.created_at;
+          delete mapped.created_at;
+          migrated = true;
+        }
+        if (mapped.createdAt !== undefined && mapped.Created_At === undefined) {
+          mapped.Created_At = mapped.createdAt;
+          delete mapped.createdAt;
+          migrated = true;
+        }
+        if (mapped.id_user !== undefined && mapped.ID_User === undefined) {
+          mapped.ID_User = mapped.id_user;
+          delete mapped.id_user;
+          migrated = true;
+        }
+        return mapped;
+      });
+
+      if (migrated) {
+        ldb.set('users', cleanUsers);
+      }
+
       const urlObj = new URL(path, window.location.origin);
       const userIdParam = urlObj.searchParams.get('userId');
+      let filteredUsers = cleanUsers;
       if (userIdParam) {
-        const currentUser = users.find((u: any) => u.ID_User === userIdParam);
+        const currentUser = cleanUsers.find((u: any) => u.ID_User === userIdParam);
         if (currentUser && currentUser.Role !== 'creator' && currentUser.cafeId) {
-          return { ok: true, status: 200, data: users.filter((u: any) => u.cafeId === currentUser.cafeId) };
+          filteredUsers = cleanUsers.filter((u: any) => u.cafeId === currentUser.cafeId);
         }
       }
-      return { ok: true, status: 200, data: users };
+
+      // Remove passwords from response
+      const responseUsers = filteredUsers.map(({ Password, ...u }: any) => u);
+      return { ok: true, status: 200, data: responseUsers };
     }
     if (cleanPath === '/users' && method === 'POST') {
       const ldb = getLocalDb();
-      const users = ldb.get('users');
-      const newUser = { ...body, ID_User: body.ID_User || `usr_${Date.now()}` };
+      const users = ldb.get('users') || [];
+      const { nama, email, password, role, status, actorId, cafeId } = body;
+
+      const existingUser = users.find((u: any) => u && u.Email && u.Email.toLowerCase() === (email || '').toLowerCase());
+      if (existingUser) {
+        return { ok: false, status: 400, data: { success: false, message: 'Email sudah terdaftar.' } };
+      }
+
+      let nextNum = 1;
+      if (users.length > 0) {
+        const nums = users.map((u: any) => {
+          if (!u || !u.ID_User) return 0;
+          const parts = u.ID_User.split('-');
+          if (parts.length < 2) return 0;
+          const parsed = parseInt(parts[1], 10);
+          return isNaN(parsed) ? 0 : parsed;
+        });
+        nextNum = Math.max(...nums, 0) + 1;
+      }
+      const idUser = `USR-${String(nextNum).padStart(3, '0')}`;
+
+      const newUser = {
+        ID_User: idUser,
+        Nama: nama,
+        Email: email,
+        Role: role || 'kasir',
+        Status: status || 'active',
+        Password: password || '123456',
+        Created_At: new Date().toISOString(),
+        cafeId: cafeId || 'cafe-maissy-coffee'
+      };
+
       users.push(newUser);
       ldb.set('users', users);
+
+      // Log activity
+      const actor = users.find((u: any) => u.ID_User === actorId) || { Nama: 'System' };
+      const logs = ldb.get('activity_log') || [];
+      logs.unshift({
+        Timestamp: new Date().toISOString(),
+        ID_User: actorId || 'SYSTEM',
+        Nama_User: actor.Nama || 'System',
+        Action: 'CREATE_USER',
+        Module: 'USER_MANAGEMENT',
+        Description: `Membuat pengguna baru: ${nama} (${role}) (client-side local db)`,
+      });
+      ldb.set('activity_log', logs);
+
       return { ok: true, status: 200, data: { success: true, user: newUser } };
     }
     if (cleanPath.startsWith('/users/') && method === 'PUT') {
       const id = cleanPath.split('/')[2];
       const ldb = getLocalDb();
-      const users = ldb.get('users');
+      const users = ldb.get('users') || [];
       const idx = users.findIndex((u: any) => u.ID_User === id);
       if (idx !== -1) {
-        users[idx] = { ...users[idx], ...body };
+        const oldUser = users[idx];
+        const { nama, email, password, role, status, actorId, cafeId } = body;
+
+        // Check duplicate email
+        if (email && email.toLowerCase() !== (oldUser.Email || '').toLowerCase()) {
+          const emailExists = users.some((u: any) => u && u.Email && u.Email.toLowerCase() === email.toLowerCase());
+          if (emailExists) {
+            return { ok: false, status: 400, data: { success: false, message: 'Email sudah terdaftar di pengguna lain.' } };
+          }
+        }
+
+        const updatedUser = {
+          ...oldUser,
+          Nama: nama !== undefined ? nama : oldUser.Nama,
+          Email: email !== undefined ? email : oldUser.Email,
+          Password: password !== undefined ? password : oldUser.Password,
+          Role: role !== undefined ? role : oldUser.Role,
+          Status: status !== undefined ? status : oldUser.Status,
+          cafeId: cafeId !== undefined ? cafeId : oldUser.cafeId,
+        };
+
+        users[idx] = updatedUser;
         ldb.set('users', users);
+
+        // Log activity
+        const actor = users.find((u: any) => u.ID_User === actorId) || { Nama: 'System' };
+        const logs = ldb.get('activity_log') || [];
+        logs.unshift({
+          Timestamp: new Date().toISOString(),
+          ID_User: actorId || 'SYSTEM',
+          Nama_User: actor.Nama || 'System',
+          Action: 'UPDATE_USER',
+          Module: 'USER_MANAGEMENT',
+          Description: `Mengubah detail pengguna ${oldUser.Nama} (Status: ${updatedUser.Status}, Role: ${updatedUser.Role}) (client-side local db)`,
+        });
+        ldb.set('activity_log', logs);
+
+        return { ok: true, status: 200, data: { success: true, user: updatedUser } };
       }
-      return { ok: true, status: 200, data: { success: true, user: body } };
+      return { ok: false, status: 404, data: { success: false, message: 'User tidak ditemukan' } };
     }
     if (cleanPath.startsWith('/users/') && method === 'DELETE') {
       const id = cleanPath.split('/')[2];
+      const urlObj = new URL(path, window.location.origin);
+      const actorId = urlObj.searchParams.get('actorId');
       const ldb = getLocalDb();
-      const users = ldb.get('users');
-      const filtered = users.filter((u: any) => u.ID_User !== id);
-      ldb.set('users', filtered);
-      return { ok: true, status: 200, data: { success: true } };
+      const users = ldb.get('users') || [];
+      const idx = users.findIndex((u: any) => u.ID_User === id);
+      
+      if (idx !== -1) {
+        const targetUser = users[idx];
+        if (targetUser.ID_User === actorId) {
+          return { ok: false, status: 400, data: { success: false, message: 'Anda tidak dapat menghapus akun Anda sendiri!' } };
+        }
+
+        const filtered = users.filter((u: any) => u.ID_User !== id);
+        ldb.set('users', filtered);
+
+        // Log activity
+        const actor = users.find((u: any) => u.ID_User === actorId) || { Nama: 'System' };
+        const logs = ldb.get('activity_log') || [];
+        logs.unshift({
+          Timestamp: new Date().toISOString(),
+          ID_User: actorId || 'SYSTEM',
+          Nama_User: actor.Nama || 'System',
+          Action: 'DELETE_USER',
+          Module: 'USER_MANAGEMENT',
+          Description: `Menghapus pengguna: ${targetUser.Nama} (${targetUser.Role}) (client-side local db)`,
+        });
+        ldb.set('activity_log', logs);
+
+        return { ok: true, status: 200, data: { success: true } };
+      }
+      return { ok: false, status: 404, data: { success: false, message: 'User tidak ditemukan' } };
     }
 
     // 5. CRUD: Menus
