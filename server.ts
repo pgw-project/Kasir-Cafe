@@ -711,20 +711,7 @@ async function startServer() {
 
     // Handle upload if base64 provided
     if (fotoBase64) {
-      try {
-        const matches = fotoBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          const fileBuffer = Buffer.from(matches[2], 'base64');
-          const fileName = `${Date.now()}_${fotoFileName || 'uploaded_image.png'}`;
-          const filePath = path.join(UPLOADS_DIR, fileName);
-          fs.writeFileSync(filePath, fileBuffer);
-          // Keep base64 string in database for 100% cloud run persistence, but write local backup
-          finalFotoUrl = fotoBase64;
-          console.log(`Successfully saved uploaded menu photo backup to ${filePath}`);
-        }
-      } catch (err) {
-        console.error('Error decoding/saving menu photo base64:', err);
-      }
+      finalFotoUrl = fotoBase64;
     }
 
     // Generate unique ID_Menu (MN-XXX) robustly
@@ -787,20 +774,7 @@ async function startServer() {
     let finalFotoUrl = fotoUrl || oldMenu.Foto_URL;
 
     if (fotoBase64) {
-      try {
-        const matches = fotoBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          const fileBuffer = Buffer.from(matches[2], 'base64');
-          const fileName = `${Date.now()}_${fotoFileName || 'uploaded_image.png'}`;
-          const filePath = path.join(UPLOADS_DIR, fileName);
-          fs.writeFileSync(filePath, fileBuffer);
-          // Keep base64 string in database for 100% cloud run persistence, but write local backup
-          finalFotoUrl = fotoBase64;
-          console.log(`Successfully saved uploaded menu photo backup during update to ${filePath}`);
-        }
-      } catch (err) {
-        console.error('Error decoding/saving menu photo base64 during update:', err);
-      }
+      finalFotoUrl = fotoBase64;
     }
 
     db.menus[menuIndex] = {
@@ -887,24 +861,7 @@ async function startServer() {
     const actor = db.users.find((u: User) => u.ID_User === actorId);
     const actorName = actor ? actor.Nama : 'System';
 
-    // Decode base64 logoUrl on the server side and save it as a local static file
     let finalLogoUrl = logoUrl;
-    if (logoUrl && logoUrl.startsWith('data:')) {
-      try {
-        const matches = logoUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-        if (matches && matches.length === 3) {
-          const fileBuffer = Buffer.from(matches[2], 'base64');
-          const fileExtension = matches[1].split('/')[1] || 'png';
-          const fileName = `logo_${Date.now()}.${fileExtension}`;
-          const filePath = path.join(UPLOADS_DIR, fileName);
-          fs.writeFileSync(filePath, fileBuffer);
-          // We keep finalLogoUrl as the base64 string itself so it persists inside Firestore settings document forever!
-          console.log(`[Logo Upload] Decoded and saved logo static file backup to ${filePath}`);
-        }
-      } catch (err) {
-        console.error('[Logo Upload] Error decoding/saving logo base64:', err);
-      }
-    }
 
     if (actor && actor.Role !== 'creator' && actor.cafeId) {
       if (!db.settings.cafes) {
