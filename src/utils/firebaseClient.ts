@@ -152,7 +152,7 @@ export const clientFirebaseRouter = {
       const ldb = getLocalDb();
       const users: User[] = ldb.get('users');
 
-      const user = users.find(u => u.Email.toLowerCase() === email.toLowerCase() && u.Status === 'active');
+      const user = users.find(u => u && u.Email && u.Email.toLowerCase() === (email || '').toLowerCase() && u.Status === 'active');
       if (!user) {
         return { ok: false, status: 401, data: { success: false, message: 'Email tidak terdaftar atau akun nonaktif' } };
       }
@@ -184,7 +184,7 @@ export const clientFirebaseRouter = {
       const ldb = getLocalDb();
       const users: User[] = ldb.get('users');
 
-      const exists = users.some(u => u.Email.toLowerCase() === email.toLowerCase());
+      const exists = users.some(u => u && u.Email && u.Email.toLowerCase() === (email || '').toLowerCase());
       if (exists) {
         return { ok: false, status: 400, data: { success: false, message: 'Email sudah terdaftar.' } };
       }
@@ -223,7 +223,7 @@ export const clientFirebaseRouter = {
       const { email, newPassword } = body;
       const ldb = getLocalDb();
       const users: User[] = ldb.get('users');
-      const idx = users.findIndex(u => u.Email.toLowerCase() === email.toLowerCase());
+      const idx = users.findIndex(u => u && u.Email && u.Email.toLowerCase() === (email || '').toLowerCase());
 
       if (idx === -1) {
         return { ok: false, status: 404, data: { success: false, message: 'Email tidak ditemukan.' } };
@@ -463,7 +463,7 @@ export const clientFirebaseRouter = {
         settings.cafes = [];
       }
 
-      const normalizedId = id.toLowerCase().replace(/\s+/g, '-');
+      const normalizedId = (id || '').toLowerCase().replace(/\s+/g, '-');
       if (settings.cafes.some((c: any) => c.id === normalizedId)) {
         return { ok: false, status: 400, data: { success: false, message: 'ID Kafe sudah terdaftar.' } };
       }
@@ -904,7 +904,7 @@ export const clientFirebaseRouter = {
         const rawCategory = matchingMenu ? matchingMenu.Kategori : 'Lainnya';
         
         let category = rawCategory;
-        const lower = rawCategory.toLowerCase();
+        const lower = (rawCategory || '').toLowerCase();
         if (lower === 'coffee' || lower === 'non-coffee' || lower === 'minuman') {
           category = 'Minuman';
         } else if (lower === 'snacks' || lower === 'desserts' || lower === 'makanan') {

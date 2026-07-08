@@ -317,7 +317,7 @@ async function initDatabase() {
     if (!globalDb.users) {
       globalDb.users = [];
     }
-    let creatorUser = globalDb.users.find((u: any) => u.Email.toLowerCase() === creatorEmail.toLowerCase());
+    let creatorUser = globalDb.users.find((u: any) => u && u.Email && u.Email.toLowerCase() === creatorEmail.toLowerCase());
     if (!creatorUser) {
       creatorUser = {
         ID_User: 'USR-000',
@@ -465,7 +465,7 @@ async function startServer() {
   app.post('/api/auth/login', (req, res) => {
     const { email, password } = req.body;
     const db = readDB();
-    const user = db.users.find((u: User) => u.Email.toLowerCase() === email.toLowerCase() && u.Status === 'active');
+    const user = db.users.find((u: User) => u && u.Email && u.Email.toLowerCase() === (email || '').toLowerCase() && u.Status === 'active');
 
     if (!user) {
       return res.status(401).json({ success: false, message: 'Email tidak terdaftar atau akun nonaktif' });
@@ -499,7 +499,7 @@ async function startServer() {
     const { nama, email, password, role, cafeId } = req.body;
     const db = readDB();
 
-    const existingUser = db.users.find((u: User) => u.Email.toLowerCase() === email.toLowerCase());
+    const existingUser = db.users.find((u: User) => u && u.Email && u.Email.toLowerCase() === (email || '').toLowerCase());
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Email sudah terdaftar.' });
     }
@@ -537,7 +537,7 @@ async function startServer() {
   app.post('/api/auth/reset-password', (req, res) => {
     const { email, newPassword } = req.body;
     const db = readDB();
-    const userIndex = db.users.findIndex((u: User) => u.Email.toLowerCase() === email.toLowerCase());
+    const userIndex = db.users.findIndex((u: User) => u && u.Email && u.Email.toLowerCase() === (email || '').toLowerCase());
 
     if (userIndex === -1) {
       return res.status(404).json({ success: false, message: 'Email tidak ditemukan.' });
@@ -587,7 +587,7 @@ async function startServer() {
     const { nama, email, password, role, status, actorId, cafeId } = req.body;
     const db = readDB();
 
-    const existingUser = db.users.find((u: User) => u.Email.toLowerCase() === email.toLowerCase());
+    const existingUser = db.users.find((u: User) => u && u.Email && u.Email.toLowerCase() === (email || '').toLowerCase());
     if (existingUser) {
       return res.status(400).json({ success: false, message: 'Email sudah terdaftar.' });
     }
@@ -633,8 +633,8 @@ async function startServer() {
     const oldUser = db.users[userIndex];
     
     // Check if new email is already used by another user
-    if (email && email.toLowerCase() !== oldUser.Email.toLowerCase()) {
-      const emailExists = db.users.find((u: User) => u.Email.toLowerCase() === email.toLowerCase());
+    if (email && (email || '').toLowerCase() !== (oldUser.Email || '').toLowerCase()) {
+      const emailExists = db.users.find((u: User) => u && u.Email && u.Email.toLowerCase() === (email || '').toLowerCase());
       if (emailExists) {
         return res.status(400).json({ success: false, message: 'Email sudah terdaftar di pengguna lain.' });
       }
@@ -942,7 +942,7 @@ async function startServer() {
     }
 
     if (email) {
-      const emailExists = db.users.some((u: User) => u.Email.toLowerCase() === email.toLowerCase());
+      const emailExists = db.users.some((u: User) => u && u.Email && u.Email.toLowerCase() === (email || '').toLowerCase());
       if (emailExists) {
         return res.status(400).json({ success: false, message: 'Email admin tersebut sudah digunakan oleh pengguna lain.' });
       }
@@ -952,7 +952,7 @@ async function startServer() {
       db.settings.cafes = [];
     }
 
-    const normalizedId = id.toLowerCase().replace(/\s+/g, '-');
+    const normalizedId = (id || '').toLowerCase().replace(/\s+/g, '-');
     if (db.settings.cafes.some((c: any) => c.id === normalizedId)) {
       return res.status(400).json({ success: false, message: 'ID Kafe sudah terdaftar.' });
     }
@@ -1540,7 +1540,7 @@ async function startServer() {
       
       // Dynamic normalization for legacy categories
       let category = rawCategory;
-      const lower = rawCategory.toLowerCase();
+      const lower = (rawCategory || '').toLowerCase();
       if (lower === 'coffee' || lower === 'non-coffee' || lower === 'minuman') {
         category = 'Minuman';
       } else if (lower === 'snacks' || lower === 'desserts' || lower === 'makanan') {
