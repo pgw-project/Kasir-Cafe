@@ -280,12 +280,78 @@ export const clientFirebaseRouter = {
     // 5. CRUD: Menus
     if (cleanPath === '/menus' && method === 'GET') {
       const ldb = getLocalDb();
-      return { ok: true, status: 200, data: ldb.get('menus') };
+      const rawMenus = ldb.get('menus') || [];
+      // Auto-migrate any rawMenus with lowercase properties
+      let migrated = false;
+      const cleanMenus = rawMenus.map((m: any) => {
+        if (!m) return m;
+        const mapped = { ...m };
+        if (mapped.nama !== undefined && mapped.Nama_Menu === undefined) {
+          mapped.Nama_Menu = mapped.nama;
+          delete mapped.nama;
+          migrated = true;
+        }
+        if (mapped.kategori !== undefined && mapped.Kategori === undefined) {
+          mapped.Kategori = mapped.kategori;
+          delete mapped.kategori;
+          migrated = true;
+        }
+        if (mapped.harga !== undefined && mapped.Harga === undefined) {
+          mapped.Harga = Number(mapped.harga);
+          delete mapped.harga;
+          migrated = true;
+        }
+        if (mapped.status !== undefined && mapped.Status === undefined) {
+          mapped.Status = mapped.status;
+          delete mapped.status;
+          migrated = true;
+        }
+        if (mapped.fotoUrl !== undefined && mapped.Foto_URL === undefined) {
+          mapped.Foto_URL = mapped.fotoUrl;
+          delete mapped.fotoUrl;
+          migrated = true;
+        }
+        return mapped;
+      });
+
+      if (migrated) {
+        ldb.set('menus', cleanMenus);
+      }
+      return { ok: true, status: 200, data: cleanMenus };
     }
     if (cleanPath === '/menus' && method === 'POST') {
       const ldb = getLocalDb();
-      const menus = ldb.get('menus');
-      const newMenu = { ...body, ID_Menu: body.ID_Menu || `menu_${Date.now()}` };
+      const menus = ldb.get('menus') || [];
+      const { nama, kategori, harga, status, fotoBase64, fotoUrl } = body;
+      
+      let finalFotoUrl = fotoUrl || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=200';
+      if (fotoBase64) {
+        finalFotoUrl = fotoBase64;
+      }
+
+      let nextNum = 1;
+      if (menus.length > 0) {
+        const nums = menus.map((m: any) => {
+          if (!m || !m.ID_Menu) return 0;
+          const parts = m.ID_Menu.split('-');
+          if (parts.length < 2) return 0;
+          const parsed = parseInt(parts[1], 10);
+          return isNaN(parsed) ? 0 : parsed;
+        });
+        nextNum = Math.max(...nums, 0) + 1;
+      }
+      const idMenu = `MN-${String(nextNum).padStart(3, '0')}`;
+
+      const newMenu = {
+        ID_Menu: idMenu,
+        Nama_Menu: nama,
+        Kategori: kategori || 'Minuman',
+        Harga: isNaN(Number(harga)) ? 0 : Number(harga),
+        Foto_URL: finalFotoUrl,
+        Status: status || 'Tersedia',
+        Created_At: new Date().toISOString()
+      };
+
       menus.push(newMenu);
       ldb.set('menus', menus);
       return { ok: true, status: 200, data: { success: true, menu: newMenu } };
@@ -293,18 +359,33 @@ export const clientFirebaseRouter = {
     if (cleanPath.startsWith('/menus/') && method === 'PUT') {
       const id = cleanPath.split('/')[2];
       const ldb = getLocalDb();
-      const menus = ldb.get('menus');
+      const menus = ldb.get('menus') || [];
       const idx = menus.findIndex((m: any) => m.ID_Menu === id);
       if (idx !== -1) {
-        menus[idx] = { ...menus[idx], ...body };
+        const { nama, kategori, harga, status, fotoBase64, fotoUrl } = body;
+        const oldMenu = menus[idx];
+        let finalFotoUrl = fotoUrl || oldMenu.Foto_URL;
+        if (fotoBase64) {
+          finalFotoUrl = fotoBase64;
+        }
+
+        menus[idx] = {
+          ...oldMenu,
+          Nama_Menu: nama !== undefined ? nama : oldMenu.Nama_Menu,
+          Kategori: kategori !== undefined ? kategori : oldMenu.Kategori,
+          Harga: harga !== undefined ? (isNaN(Number(harga)) ? oldMenu.Harga : Number(harga)) : oldMenu.Harga,
+          Status: status !== undefined ? status : oldMenu.Status,
+          Foto_URL: finalFotoUrl,
+        };
         ldb.set('menus', menus);
+        return { ok: true, status: 200, data: { success: true, menu: menus[idx] } };
       }
-      return { ok: true, status: 200, data: { success: true, menu: body } };
+      return { ok: false, status: 404, data: { success: false, message: 'Menu tidak ditemukan' } };
     }
     if (cleanPath.startsWith('/menus/') && method === 'DELETE') {
       const id = cleanPath.split('/')[2];
       const ldb = getLocalDb();
-      const menus = ldb.get('menus');
+      const menus = ldb.get('menus') || [];
       const filtered = menus.filter((m: any) => m.ID_Menu !== id);
       ldb.set('menus', filtered);
       return { ok: true, status: 200, data: { success: true } };
@@ -406,6 +487,15 @@ export const clientFirebaseRouter = {
             pesanFooter: pesanFooter || settings.cafes[cafeIndex].pesanFooter,
             logoUrl: logoUrl !== undefined ? logoUrl : settings.cafes[cafeIndex].logoUrl,
           };
+
+          // If this is the active cafe, ALSO update the top-level settings so they are in sync!
+          if (settings.activeCafeId === actor.cafeId) {
+            settings.namaToko = settings.cafes[cafeIndex].namaToko;
+            settings.alamat = settings.cafes[cafeIndex].alamat;
+            settings.telepon = settings.cafes[cafeIndex].telepon;
+            settings.pesanFooter = settings.cafes[cafeIndex].pesanFooter;
+            settings.logoUrl = settings.cafes[cafeIndex].logoUrl;
+          }
         }
       } else {
         // Creator updating global settings

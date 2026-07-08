@@ -877,6 +877,15 @@ async function startServer() {
           pesanFooter: pesanFooter || db.settings.cafes[cafeIndex].pesanFooter,
           logoUrl: finalLogoUrl !== undefined ? finalLogoUrl : db.settings.cafes[cafeIndex].logoUrl,
         };
+
+        // If this is the active cafe, ALSO update the top-level settings so they are in sync!
+        if (db.settings.activeCafeId === actor.cafeId) {
+          db.settings.namaToko = db.settings.cafes[cafeIndex].namaToko;
+          db.settings.alamat = db.settings.cafes[cafeIndex].alamat;
+          db.settings.telepon = db.settings.cafes[cafeIndex].telepon;
+          db.settings.pesanFooter = db.settings.cafes[cafeIndex].pesanFooter;
+          db.settings.logoUrl = db.settings.cafes[cafeIndex].logoUrl;
+        }
       }
     } else {
       db.settings = {
