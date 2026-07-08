@@ -180,15 +180,16 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
     const lower = (cat || '').toLowerCase();
     if (lower === 'coffee' || lower === 'non-coffee' || lower === 'minuman') return 'Minuman';
     if (lower === 'snacks' || lower === 'desserts' || lower === 'makanan') return 'Makanan';
-    return cat;
+    return cat || '';
   };
 
   // Filters
   const categories = ['Semua', 'Makanan', 'Minuman'];
   
-  const filteredMenus = menus.filter((menu) => {
-    const matchesSearch = menu.Nama_Menu.toLowerCase().includes(searchQuery.toLowerCase());
-    const normalizedMenuCat = getNormalizedCategory(menu.Kategori);
+  const filteredMenus = (menus || []).filter((menu) => {
+    if (!menu) return false;
+    const matchesSearch = (menu.Nama_Menu || '').toLowerCase().includes((searchQuery || '').toLowerCase());
+    const normalizedMenuCat = getNormalizedCategory(menu.Kategori || '');
     const matchesCategory = activeCategory === 'Semua' || normalizedMenuCat === activeCategory;
     return matchesSearch && matchesCategory;
   });

@@ -201,12 +201,13 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
     const lower = (cat || '').toLowerCase();
     if (lower === 'coffee' || lower === 'non-coffee' || lower === 'minuman') return 'Minuman';
     if (lower === 'snacks' || lower === 'desserts' || lower === 'makanan') return 'Makanan';
-    return cat;
+    return cat || '';
   };
 
-  const filteredMenus = menus.filter((m) => {
-    const matchesSearch = m.Nama_Menu.toLowerCase().includes(searchQuery.toLowerCase());
-    const normalizedMenuCat = getNormalizedCategory(m.Kategori);
+  const filteredMenus = (menus || []).filter((m) => {
+    if (!m) return false;
+    const matchesSearch = (m.Nama_Menu || '').toLowerCase().includes((searchQuery || '').toLowerCase());
+    const normalizedMenuCat = getNormalizedCategory(m.Kategori || '');
     const matchesCategory = selectedCategory === 'Semua' || normalizedMenuCat === selectedCategory;
     return matchesSearch && matchesCategory;
   });

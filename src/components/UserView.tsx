@@ -283,9 +283,10 @@ export default function UserView({ currentUser }: UserViewProps) {
     });
   };
 
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch = u.Nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          u.Email.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredUsers = (users || []).filter((u) => {
+    if (!u) return false;
+    const matchesSearch = (u.Nama || '').toLowerCase().includes((searchQuery || '').toLowerCase()) || 
+                          (u.Email || '').toLowerCase().includes((searchQuery || '').toLowerCase());
     
     // Admin (owner cafe) only sees users of their own cafe and cannot see/manage other admins or creators
     if (currentUser.Role === 'admin') {
