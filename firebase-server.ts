@@ -1,5 +1,14 @@
-import { initializeApp, getApps, App } from 'firebase-admin/app';
-import { getFirestore, Firestore } from 'firebase-admin/firestore';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { 
+  getFirestore, 
+  collection, 
+  doc, 
+  getDoc, 
+  getDocs, 
+  setDoc, 
+  writeBatch,
+  Firestore
+} from 'firebase/firestore';
 import fs from 'fs';
 import path from 'path';
 
@@ -16,34 +25,19 @@ try {
   console.error('[Firebase Server] Error reading firebase-applet-config.json:', error);
 }
 
-// Initialize Firebase Admin SDK safely
-let adminApp: App | null = null;
+// Initialize Firebase Client SDK safely on the server-side
 let firestore: Firestore | null = null;
 
 try {
-  const existingApps = getApps();
-  if (existingApps.length > 0) {
-    adminApp = existingApps[0];
+  if (firebaseConfig && firebaseConfig.projectId) {
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    firestore = getFirestore(app, firebaseConfig.firestoreDatabaseId || undefined);
+    console.log('[Firebase Server] Client-side SDK initialized successfully on server-side.');
   } else {
-    // Check if we have project ID configured or let Firebase find it via environment variables
-    if (firebaseConfig.projectId) {
-      adminApp = initializeApp({
-        projectId: firebaseConfig.projectId,
-      });
-      console.log('[Firebase Server] Initialized successfully with config project ID:', firebaseConfig.projectId);
-    } else {
-      // Allow fallback to default/server credentials without throwing error
-      adminApp = initializeApp();
-      console.log('[Firebase Server] Initialized successfully with Application Default Credentials.');
-    }
-  }
-
-  if (adminApp) {
-    firestore = getFirestore(adminApp, firebaseConfig.firestoreDatabaseId || undefined);
-    console.log('[Firebase Server] Firestore instance initialized successfully.');
+    console.warn('[Firebase Server] Configuration not found or incomplete.');
   }
 } catch (error) {
-  console.error('[Firebase Server] Failed to initialize Firebase Admin SDK. Server will run in LOCAL database mode:', error);
+  console.error('[Firebase Server] Failed to initialize Firebase Client SDK on server:', error);
 }
 
 export { firestore };
@@ -58,7 +52,7 @@ export async function loadFromFirestore() {
     return null;
   }
   
-  console.log('[Firestore] Fetching data from cloud Firestore...');
+  console.log('[Firestore] Fetching data from cloud Firestore using client-side credentials...');
   
   const fetchPromise = async () => {
     const collections = ['users', 'menus', 'transactions', 'transaction_details', 'activity_log'];
@@ -66,7 +60,7 @@ export async function loadFromFirestore() {
     let totalDocs = 0;
 
     for (const col of collections) {
-      const snapshot = await firestore!.collection(col).get();
+      const snapshot = await getDocs(collection(firestore!, col));
       const list: any[] = [];
       snapshot.forEach(doc => {
         list.push(doc.data());
@@ -77,8 +71,8 @@ export async function loadFromFirestore() {
     }
 
     // Load settings
-    const settingsDoc = await firestore!.collection('settings').doc('global').get();
-    if (settingsDoc.exists) {
+    const settingsDoc = await getDoc(doc(firestore!, 'settings', 'global'));
+    if (settingsDoc.exists()) {
       result['settings'] = settingsDoc.data();
       totalDocs++;
       console.log('[Firestore] Loaded settings from cloud.');
@@ -144,7 +138,7 @@ export async function syncCollection(col: string, newItems: any[]) {
   try {
     if (col === 'settings') {
       const cleanedSettings = cleanUndefined(newItems);
-      await firestore.collection('settings').doc('global').set(cleanedSettings);
+      await setDoc(doc(firestore, 'settings', 'global'), cleanedSettings);
       console.log('[Firestore] Settings synced to cloud.');
       return;
     }
@@ -157,7 +151,7 @@ export async function syncCollection(col: string, newItems: any[]) {
                   'ID_Log';
 
     // 1. Get existing docs in Firestore for this collection
-    const snapshot = await firestore.collection(col).get();
+    const snapshot = await getDocs(collection(firestore, col));
     const existingIds = new Set<string>();
     snapshot.forEach(doc => {
       existingIds.add(doc.id);
@@ -165,17 +159,17 @@ export async function syncCollection(col: string, newItems: any[]) {
 
     const newItemsIds = new Set(newItems.map(item => item[idKey]).filter(Boolean));
 
-    let batch = firestore.batch();
+    let batch = writeBatch(firestore);
     let opCount = 0;
 
     // 2. Find orphaned docs in Firestore and delete them
     for (const id of existingIds) {
       if (!newItemsIds.has(id)) {
-        batch.delete(firestore.collection(col).doc(id));
+        batch.delete(doc(firestore, col, id));
         opCount++;
         if (opCount >= 400) {
           await batch.commit();
-          batch = firestore.batch();
+          batch = writeBatch(firestore);
           opCount = 0;
         }
       }
@@ -185,11 +179,11 @@ export async function syncCollection(col: string, newItems: any[]) {
     for (const item of newItems) {
       const id = item[idKey] || `log_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
       const cleanedItem = cleanUndefined(item);
-      batch.set(firestore.collection(col).doc(id), cleanedItem);
+      batch.set(doc(firestore, col, id), cleanedItem);
       opCount++;
       if (opCount >= 400) {
         await batch.commit();
-        batch = firestore.batch();
+        batch = writeBatch(firestore);
         opCount = 0;
       }
     }
