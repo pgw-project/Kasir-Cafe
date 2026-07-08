@@ -386,193 +386,197 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
 
       {/* --- ADD/EDIT MENU FORM DIALOG --- */}
       {isFormOpen && (
-        <div id="menu-form-dialog" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-lg bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 relative">
+        <div id="menu-form-dialog" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="w-full max-w-lg bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden">
             <button
               id="close-menu-dialog"
               onClick={() => setIsFormOpen(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-500 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-500 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer z-10"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-lg">
-              {formMode === 'add' ? 'Tambah Item Menu Baru' : `Ubah Item Menu ${editId}`}
-            </h3>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-              Lengkapi detail menu dan unggah foto produk kopi atau makanan pendamping.
-            </p>
+            <div className="p-6 pb-2">
+              <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-lg">
+                {formMode === 'add' ? 'Tambah Item Menu Baru' : `Ubah Item Menu ${editId}`}
+              </h3>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                Lengkapi detail menu dan unggah foto produk kopi atau makanan pendamping.
+              </p>
+            </div>
 
-            <form onSubmit={handleFormSubmit} className="mt-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Nama Menu */}
-                <div className="space-y-1.5">
-                  <label htmlFor="menu-name-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                    Nama Menu <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="menu-name-field"
-                    type="text"
-                    placeholder="Contoh: Es Kopi Susu Aren"
-                    value={namaMenu}
-                    onChange={(e) => setNamaMenu(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
-                    required
-                  />
-                </div>
+            <form onSubmit={handleFormSubmit} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Nama Menu */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="menu-name-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                      Nama Menu <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="menu-name-field"
+                      type="text"
+                      placeholder="Contoh: Es Kopi Susu Aren"
+                      value={namaMenu}
+                      onChange={(e) => setNamaMenu(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
+                      required
+                    />
+                  </div>
 
-                {/* Kategori */}
-                <div className="space-y-1.5">
-                  <label htmlFor="menu-cat-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                    Kategori <span className="text-rose-500">*</span>
-                  </label>
-                  <select
-                    id="menu-cat-field"
-                    value={kategori}
-                    onChange={(e) => setKategori(e.target.value)}
-                    className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
-                  >
-                    <option value="Makanan">Makanan</option>
-                    <option value="Minuman">Minuman</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Harga */}
-                <div className="space-y-1.5">
-                  <label htmlFor="menu-price-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                    Harga Jual (Rp) <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    id="menu-price-field"
-                    type="number"
-                    placeholder="Contoh: 18000"
-                    value={harga}
-                    onChange={(e) => setHarga(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs font-bold focus:outline-none focus:border-amber-500 transition"
-                    required
-                  />
-                </div>
-
-                {/* Status Ketersediaan */}
-                <div className="space-y-1.5">
-                  <label htmlFor="menu-status-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                    Status Menu <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      id="status-available-btn"
-                      onClick={() => setStatus('Tersedia')}
-                      className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer
-                        ${status === 'Tersedia' 
-                          ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-500' 
-                          : 'border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:bg-zinc-50'}`}
+                  {/* Kategori */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="menu-cat-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                      Kategori <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      id="menu-cat-field"
+                      value={kategori}
+                      onChange={(e) => setKategori(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
                     >
-                      Tersedia
-                    </button>
-                    <button
-                      type="button"
-                      id="status-soldout-btn"
-                      onClick={() => setStatus('Habis')}
-                      className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer
-                        ${status === 'Habis' 
-                          ? 'bg-rose-500/10 border-rose-500 text-rose-600 dark:text-rose-500' 
-                          : 'border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:bg-zinc-50'}`}
-                    >
-                      Habis
-                    </button>
+                      <option value="Makanan">Makanan</option>
+                      <option value="Minuman">Minuman</option>
+                    </select>
                   </div>
                 </div>
-              </div>
 
-              {/* URL Input Field & File Uploader */}
-              <div className="space-y-3.5">
-                <div className="space-y-1.5">
-                  <label htmlFor="menu-url-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 block">
-                    Unggah Gambar Baru ATAU Masukkan URL Gambar
-                  </label>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <div className="flex-1">
-                      <input
-                        id="menu-url-field"
-                        type="url"
-                        placeholder="Contoh: https://images.unsplash.com/... atau link Google Drive"
-                        value={fotoUrl.startsWith('data:') ? '' : fotoUrl}
-                        onChange={(e) => {
-                          const converted = convertGoogleDriveUrl(e.target.value.trim());
-                          setFotoUrl(converted);
-                          setFotoPreview(converted); // Sync preview to URL
-                        }}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
-                      />
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            if (file.size > 2 * 1024 * 1024) {
-                              alert("Ukuran gambar tidak boleh lebih dari 2MB!");
-                              return;
-                            }
-                            resizeAndCompressImage(file, 400, 400, (compressedBase64) => {
-                              setFotoUrl(compressedBase64);
-                              setFotoPreview(compressedBase64);
-                            });
-                          }
-                        }}
-                        className="hidden" 
-                        id="menu-upload-input"
-                      />
-                      <label 
-                        htmlFor="menu-upload-input"
-                        className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition cursor-pointer"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Harga */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="menu-price-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                      Harga Jual (Rp) <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="menu-price-field"
+                      type="number"
+                      placeholder="Contoh: 18000"
+                      value={harga}
+                      onChange={(e) => setHarga(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs font-bold focus:outline-none focus:border-amber-500 transition"
+                      required
+                    />
+                  </div>
+
+                  {/* Status Ketersediaan */}
+                  <div className="space-y-1.5">
+                    <label htmlFor="menu-status-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                      Status Menu <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        id="status-available-btn"
+                        onClick={() => setStatus('Tersedia')}
+                        className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer
+                          ${status === 'Tersedia' 
+                            ? 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-500' 
+                            : 'border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:bg-zinc-50'}`}
                       >
-                        <Upload className="h-3.5 w-3.5" />
-                        Pilih File
-                      </label>
+                        Tersedia
+                      </button>
+                      <button
+                        type="button"
+                        id="status-soldout-btn"
+                        onClick={() => setStatus('Habis')}
+                        className={`py-2 rounded-xl text-xs font-bold border transition cursor-pointer
+                          ${status === 'Habis' 
+                            ? 'bg-rose-500/10 border-rose-500 text-rose-600 dark:text-rose-500' 
+                            : 'border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:bg-zinc-50'}`}
+                      >
+                        Habis
+                      </button>
                     </div>
                   </div>
                 </div>
 
-                <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-normal">
-                  💡 <strong>Tips Gambar:</strong> Anda bisa mengunggah file gambar (JPG/PNG) secara langsung dari perangkat Anda (akan otomatis dikompres untuk menghemat kapasitas database), atau tempelkan link dari internet atau Google Drive.
-                </p>
-
-                {fotoPreview && (
-                  <div className="mt-2 flex flex-col items-center p-2.5 bg-zinc-50 dark:bg-[#25201c]/40 rounded-xl border border-zinc-100 dark:border-zinc-800/60 relative">
-                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-1.5 font-bold">Pratinjau Gambar:</p>
-                    <div className="relative h-24 w-24 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm">
-                      <img 
-                        src={fotoPreview} 
-                        alt="Preview URL" 
-                        className="object-cover w-full h-full" 
-                        onError={(e) => {
-                          e.currentTarget.src = 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=200';
-                        }}
-                      />
+                {/* URL Input Field & File Uploader */}
+                <div className="space-y-3.5">
+                  <div className="space-y-1.5">
+                    <label htmlFor="menu-url-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 block">
+                      Unggah Gambar Baru ATAU Masukkan URL Gambar
+                    </label>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <div className="flex-1">
+                        <input
+                          id="menu-url-field"
+                          type="url"
+                          placeholder="Contoh: https://images.unsplash.com/... atau link Google Drive"
+                          value={fotoUrl.startsWith('data:') ? '' : fotoUrl}
+                          onChange={(e) => {
+                            const converted = convertGoogleDriveUrl(e.target.value.trim());
+                            setFotoUrl(converted);
+                            setFotoPreview(converted); // Sync preview to URL
+                          }}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 2 * 1024 * 1024) {
+                                alert("Ukuran gambar tidak boleh lebih dari 2MB!");
+                                return;
+                              }
+                              resizeAndCompressImage(file, 400, 400, (compressedBase64) => {
+                                setFotoUrl(compressedBase64);
+                                setFotoPreview(compressedBase64);
+                              });
+                            }
+                          }}
+                          className="hidden" 
+                          id="menu-upload-input"
+                        />
+                        <label 
+                          htmlFor="menu-upload-input"
+                          className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition cursor-pointer"
+                        >
+                          <Upload className="h-3.5 w-3.5" />
+                          Pilih File
+                        </label>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFotoUrl('');
-                        setFotoPreview('');
-                      }}
-                      className="absolute top-2 right-2 p-1 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-700 transition"
-                      title="Hapus gambar"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
                   </div>
-                )}
+
+                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-normal">
+                    💡 <strong>Tips Gambar:</strong> Anda bisa mengunggah file gambar (JPG/PNG) secara langsung dari perangkat Anda (akan otomatis dikompres untuk menghemat kapasitas database), atau tempelkan link dari internet atau Google Drive.
+                  </p>
+
+                  {fotoPreview && (
+                    <div className="mt-2 flex flex-col items-center p-2.5 bg-zinc-50 dark:bg-[#25201c]/40 rounded-xl border border-zinc-100 dark:border-zinc-800/60 relative">
+                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-1.5 font-bold">Pratinjau Gambar:</p>
+                      <div className="relative h-24 w-24 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                        <img 
+                          src={fotoPreview} 
+                          alt="Preview URL" 
+                          className="object-cover w-full h-full" 
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=200';
+                          }}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFotoUrl('');
+                          setFotoPreview('');
+                        }}
+                        className="absolute top-2 right-2 p-1 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-700 transition"
+                        title="Hapus gambar"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Submit Action */}
-              <div className="pt-2 flex justify-end gap-3">
+              <div className="p-4 sm:p-5 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-[#201c18]/50 flex justify-end gap-3 rounded-b-2xl">
                 <button
                   type="button"
                   id="cancel-menu-form"

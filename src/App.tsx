@@ -514,19 +514,9 @@ export default function App() {
 
                 {/* Password Field */}
                 <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <label htmlFor="login-password" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
-                      <Lock className="h-4 w-4" /> Kata Sandi
-                    </label>
-                    <button
-                      type="button"
-                      id="link-forgot-pwd"
-                      onClick={() => { setAuthMode('forgot'); setAuthError(''); setAuthSuccessMsg(''); }}
-                      className="text-[10px] font-bold text-amber-600 hover:underline cursor-pointer"
-                    >
-                      Lupa Sandi?
-                    </button>
-                  </div>
+                  <label htmlFor="login-password" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                    <Lock className="h-4 w-4" /> Kata Sandi
+                  </label>
                   <input
                     id="login-password"
                     type="password"
