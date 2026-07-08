@@ -106,7 +106,7 @@ const getLocalDb = () => {
     }
   }
 
-  return {
+  const dbInstance = {
     get: (col: string): any => {
       try {
         const val = localStorage.getItem(`pos_${col}`);
@@ -123,6 +123,12 @@ const getLocalDb = () => {
       }
     }
   };
+
+  if (typeof window !== 'undefined') {
+    (window as any).__getLocalDbInstance = dbInstance;
+  }
+
+  return dbInstance;
 };
 
 // Seeding helper is bypassed on client to avoid "Missing or insufficient permissions"
@@ -912,3 +918,194 @@ export const clientFirebaseRouter = {
     return { ok: false, status: 404, data: { success: false, message: 'Resource not found client-side' } };
   }
 };
+
+// --- CLIENT-SIDE RECEIPT GENERATOR ---
+// Generates printable thermal layout dynamically in the browser
+export function generateReceiptHtml(tx: Transaction, details: TransactionDetail[], settings: any, paperSize: string = '80'): string {
+  let widthStyle = '80mm';
+  let fontStyle = '12px';
+  let paddingStyle = '5mm';
+
+  if (paperSize === '58') {
+    widthStyle = '58mm';
+    fontStyle = '11px';
+    paddingStyle = '2mm';
+  } else if (paperSize === 'A4') {
+    widthStyle = '190mm';
+    fontStyle = '14px';
+    paddingStyle = '15mm';
+  }
+
+  // Handle cafe settings fallback/override
+  let activeSettings = { ...settings };
+  if (tx.cafeId && settings.cafes) {
+    const txCafe = settings.cafes.find((c: any) => c.id === tx.cafeId);
+    if (txCafe) {
+      activeSettings = {
+        ...activeSettings,
+        namaToko: txCafe.namaToko,
+        alamat: txCafe.alamat,
+        telepon: txCafe.telepon,
+        pesanFooter: txCafe.pesanFooter,
+      };
+    }
+  }
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Struk Belanja ${tx.ID_Transaksi}</title>
+      <style>
+        body {
+          font-family: 'Courier New', Courier, monospace;
+          width: ${widthStyle};
+          margin: 0;
+          padding: ${paddingStyle};
+          font-size: ${fontStyle};
+          color: #000;
+          background: #fff;
+        }
+        .text-center { text-align: center; }
+        .text-right { text-align: right; }
+        .header {
+          margin-bottom: 5px;
+        }
+        .title {
+          font-size: 16px;
+          font-weight: bold;
+          margin: 0;
+        }
+        .divider {
+          border-top: 1px dashed #000;
+          margin: 5px 0;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        td {
+          padding: 3px 0;
+          vertical-align: top;
+        }
+        .footer {
+          margin-top: 15px;
+          font-size: 10px;
+        }
+        @media print {
+          body { margin: 0; padding: 0; width: ${widthStyle}; }
+          .no-print { display: none; }
+        }
+        .no-print-btn {
+          background: #000;
+          color: #fff;
+          border: none;
+          padding: 8px 16px;
+          font-family: sans-serif;
+          font-size: 12px;
+          cursor: pointer;
+          border-radius: 4px;
+          margin-bottom: 10px;
+          width: 100%;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="no-print" style="margin-bottom: 15px;">
+        <button class="no-print-btn" onclick="window.print()">Cetak Struk (PDF)</button>
+      </div>
+      <div class="header text-center">
+        <p class="title">${activeSettings.namaToko || 'Maissy Coffee'}</p>
+        <p style="margin: 3px 0;">${activeSettings.alamat || ''}</p>
+        <p style="margin: 3px 0;">Telp: ${activeSettings.telepon || ''}</p>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <div>
+        <table>
+          <tr>
+            <td>No: ${tx.ID_Transaksi}</td>
+            <td class="text-right">Kasir: ${tx.Kasir}</td>
+          </tr>
+          <tr>
+            <td>Tgl: ${new Date(tx.Tanggal).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}</td>
+            <td class="text-right">Cust: ${tx.Nama_Pelanggan}</td>
+          </tr>
+        </table>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <table>
+        <tbody>
+          ${details.map((item: TransactionDetail) => `
+            <tr>
+              <td colspan="2">${item.Nama_Menu}</td>
+            </tr>
+            <tr>
+              <td style="padding-left: 10px;">${item.Qty} x Rp ${(item.Harga_Satuan || 0).toLocaleString('id-ID')}</td>
+              <td class="text-right">Rp ${(item.Subtotal || 0).toLocaleString('id-ID')}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      
+      <div class="divider"></div>
+      
+      <table>
+        <tr>
+          <td>Total Item:</td>
+          <td class="text-right">${tx.Total_Item}</td>
+        </tr>
+        <tr style="font-weight: bold;">
+          <td>Grand Total:</td>
+          <td class="text-right">Rp ${(tx.Total_Harga || 0).toLocaleString('id-ID')}</td>
+        </tr>
+        <tr>
+          <td>Metode Bayar:</td>
+          <td class="text-right" style="font-weight: bold;">${tx.Metode_Bayar || 'TUNAI'}</td>
+        </tr>
+        <tr>
+          <td>Bayar:</td>
+          <td class="text-right">Rp ${(tx.Bayar || 0).toLocaleString('id-ID')}</td>
+        </tr>
+        <tr>
+          <td>Kembali:</td>
+          <td class="text-right">Rp ${(tx.Kembali || 0).toLocaleString('id-ID')}</td>
+        </tr>
+      </table>
+      
+      <div class="divider"></div>
+      
+      <div class="footer text-center">
+        <p style="margin: 5px 0;">${activeSettings.pesanFooter || 'Terima kasih!'}</p>
+        <p style="margin: 5px 0; font-size: 8px;">support system By PGW</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+export function getReceiptUrl(txId: string, paperSize: string = '80'): string {
+  if (window.__useClientFirebase) {
+    try {
+      const ldb = (window as any).__getLocalDbInstance;
+      if (ldb) {
+        const txs: Transaction[] = ldb.get('transactions');
+        const tx = txs.find((t: any) => t.ID_Transaksi === txId);
+        if (tx) {
+          const details: TransactionDetail[] = ldb.get('transaction_details').filter((d: any) => d.ID_Transaksi === txId);
+          const settings = ldb.get('settings');
+          const html = generateReceiptHtml(tx, details, settings, paperSize);
+          const blob = new Blob([html], { type: 'text/html' });
+          return URL.createObjectURL(blob);
+        }
+      }
+    } catch (e) {
+      console.error('[Receipt URL] Error creating blob URL:', e);
+    }
+  }
+  return `/api/receipt/${txId}/print?paperSize=${paperSize}`;
+}

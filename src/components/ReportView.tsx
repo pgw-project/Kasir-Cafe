@@ -7,8 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { Search, Calendar, FileText, Download, Printer, Filter, ChevronLeft, ChevronRight, X, Bluetooth } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Transaction, TransactionDetail, Menu } from '../types.js';
-import { 
-  connectPrinter, 
+import { getReceiptUrl } from '../utils/firebaseClient.js';
+import { connectPrinter, 
   disconnectPrinter, 
   getConnectedPrinter, 
   isBluetoothSupported, 
@@ -179,7 +179,7 @@ export default function ReportView({ currentUser }: ReportViewProps) {
   }, []);
 
   const openPrintWindow = (txId: string, paperSize: string = '80') => {
-    const url = `/api/receipt/${txId}/print?paperSize=${paperSize}`;
+    const url = getReceiptUrl(txId, paperSize);
     const win = window.open(url, '_blank', 'width=400,height=600');
     if (win) {
       win.focus();

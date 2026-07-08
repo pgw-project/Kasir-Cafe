@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, CheckCircle, Printer, X, QrCode, Banknote, FileText, Bluetooth, Wifi } from 'lucide-react';
 import { Menu } from '../types.js';
+import { getReceiptUrl } from '../utils/firebaseClient.js';
 import { 
   connectPrinter, 
   disconnectPrinter, 
@@ -251,7 +252,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
   };
 
   const openPrintWindow = (txId: string, paperSize: string = '80') => {
-    const url = `/api/receipt/${txId}/print?paperSize=${paperSize}`;
+    const url = getReceiptUrl(txId, paperSize);
     const win = window.open(url, '_blank', 'width=400,height=600');
     if (win) {
       win.focus();
@@ -739,7 +740,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
                 <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-2">Pratinjau Struk Belanja</span>
                 <div className="h-44 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 bg-white shadow-sm">
                   <iframe
-                    src={`/api/receipt/${latestTx.ID_Transaksi}/print`}
+                    src={getReceiptUrl(latestTx.ID_Transaksi)}
                     title="Receipt Preview"
                     className="w-full h-full border-none"
                   />
