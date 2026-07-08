@@ -7,6 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, X, Upload, Check, CloudLightning } from 'lucide-react';
 import { Menu } from '../types.js';
 
+// Preset library removed as requested
+
 interface MenuViewProps {
   currentUser: any;
   onAddLog: (action: string, module: string, desc: string) => void;
@@ -24,17 +26,13 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
   const [editId, setEditId] = useState('');
   
   const [namaMenu, setNamaMenu] = useState('');
-  const [kategori, setKategori] = useState('Coffee');
+  const [kategori, setKategori] = useState('Minuman');
   const [harga, setHarga] = useState<number | ''>('');
   const [status, setStatus] = useState<'Tersedia' | 'Habis'>('Tersedia');
   
-  // File Upload State
-  const [fotoBase64, setFotoBase64] = useState<string>('');
-  const [fotoFileName, setFotoFileName] = useState<string>('');
+  // Image URL State
   const [fotoPreview, setFotoPreview] = useState<string>('');
-  const [dragActive, setDragActive] = useState(false);
   const [fotoUrl, setFotoUrl] = useState<string>('');
-  const [imageInputMethod, setImageInputMethod] = useState<'upload' | 'url'>('upload');
 
   // Delete Confirmation Dialog State
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -68,71 +66,14 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
     };
   }, []);
 
-  // Handle Drag-and-Drop
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const processFile = (file: File) => {
-    if (!file) return;
-    
-    // File validation: JPG, PNG, JPEG, max 2MB (as requested)
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-    if (!allowedTypes.includes(file.type)) {
-      alert('Tipe file tidak didukung! Harap unggah foto berekstensi JPG, JPEG, atau PNG.');
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Ukuran foto terlalu besar! Maksimal ukuran adalah 2MB.');
-      return;
-    }
-
-    setFotoFileName(file.name);
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setFotoBase64(reader.result);
-        setFotoPreview(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      processFile(e.target.files[0]);
-    }
-  };
-
   const handleOpenAdd = () => {
     setFormMode('add');
     setNamaMenu('');
     setKategori('Minuman');
     setHarga('');
     setStatus('Tersedia');
-    setFotoBase64('');
-    setFotoFileName('');
     setFotoPreview('');
     setFotoUrl('');
-    setImageInputMethod('upload');
     setIsFormOpen(true);
   };
 
@@ -143,11 +84,8 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
     setKategori(menu.Kategori);
     setHarga(menu.Harga);
     setStatus(menu.Status);
-    setFotoBase64('');
-    setFotoFileName('');
     setFotoPreview(menu.Foto_URL);
-    setFotoUrl(menu.Foto_URL.startsWith('/uploads/') ? '' : menu.Foto_URL);
-    setImageInputMethod(menu.Foto_URL.startsWith('/uploads/') ? 'upload' : 'url');
+    setFotoUrl(menu.Foto_URL);
     setIsFormOpen(true);
   };
 
@@ -164,9 +102,9 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
       kategori,
       harga: Number(harga),
       status,
-      fotoBase64: imageInputMethod === 'upload' ? fotoBase64 : '',
-      fotoFileName: imageInputMethod === 'upload' ? fotoFileName : '',
-      fotoUrl: imageInputMethod === 'url' ? convertGoogleDriveUrl(fotoUrl) : '',
+      fotoBase64: '',
+      fotoFileName: '',
+      fotoUrl: convertGoogleDriveUrl(fotoUrl),
       actorId: currentUser.ID_User,
     };
 
@@ -184,11 +122,6 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
       if (result.success) {
         setIsFormOpen(false);
         fetchMenus();
-        
-        // Log to simulated Google Drive backup
-        if (fotoBase64) {
-          console.log(`[Google Drive Sync] Backing up image files into folder ID: ${driveFolderId}`);
-        }
       } else {
         alert(result.message || 'Gagal menyimpan menu.');
       }
@@ -514,103 +447,8 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                 </div>
               </div>
 
-              {/* Photo Input Selector */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 block">
-                  Metode Foto Produk
-                </label>
-                <div className="grid grid-cols-2 gap-2 bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setImageInputMethod('upload');
-                      setFotoPreview(fotoBase64 ? fotoBase64 : '');
-                    }}
-                    className={`py-1.5 text-center text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                      imageInputMethod === 'upload'
-                        ? 'bg-white dark:bg-[#1a1613] text-amber-600 dark:text-amber-500 shadow-xs'
-                        : 'text-zinc-500 dark:text-zinc-400'
-                    }`}
-                  >
-                    Unggah Berkas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setImageInputMethod('url');
-                      setFotoPreview(fotoUrl ? fotoUrl : '');
-                    }}
-                    className={`py-1.5 text-center text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                      imageInputMethod === 'url'
-                        ? 'bg-white dark:bg-[#1a1613] text-amber-600 dark:text-amber-500 shadow-xs'
-                        : 'text-zinc-500 dark:text-zinc-400'
-                    }`}
-                  >
-                    Gunakan URL Gambar
-                  </button>
-                </div>
-              </div>
-
-              {imageInputMethod === 'upload' ? (
-                /* Photo Upload with Drag-and-Drop Area */
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 block">
-                    Foto Produk (Maks 2MB, format JPG/PNG)
-                  </label>
-                  
-                  <div
-                    onDragEnter={handleDrag}
-                    onDragOver={handleDrag}
-                    onDragLeave={handleDrag}
-                    onDrop={handleDrop}
-                    className={`border-2 border-dashed rounded-2xl p-4 text-center transition-all duration-300 relative flex flex-col items-center justify-center gap-2
-                      ${dragActive 
-                        ? 'border-amber-500 bg-amber-500/5' 
-                        : 'border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c]/40 hover:border-zinc-300'}`}
-                  >
-                    {fotoPreview && fotoBase64 ? (
-                      <div className="relative h-24 w-24 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
-                        <img src={fotoPreview} alt="Preview" className="object-cover w-full h-full" />
-                        <button
-                          type="button"
-                          id="remove-photo-preview-btn"
-                          onClick={() => {
-                            setFotoBase64('');
-                            setFotoFileName('');
-                            setFotoPreview('');
-                          }}
-                          className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full hover:bg-black/80 cursor-pointer"
-                          title="Hapus foto"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="p-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400">
-                          <Upload className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                            Seret & letakkan file foto di sini, atau
-                          </p>
-                          <label htmlFor="file-upload-input" className="text-xs font-bold text-amber-600 hover:text-amber-700 cursor-pointer underline inline-block mt-0.5">
-                            klik untuk pilih dari perangkat
-                          </label>
-                        </div>
-                        <input
-                          id="file-upload-input"
-                          type="file"
-                          accept="image/jpeg,image/png,image/jpg"
-                          onChange={handleFileChange}
-                          className="hidden"
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* URL Input Field */
+              {/* URL Input Field */}
+              <div className="space-y-3.5">
                 <div className="space-y-1.5">
                   <label htmlFor="menu-url-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 block">
                     URL Gambar Menu (Format HTTP/HTTPS)
@@ -618,35 +456,37 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                   <input
                     id="menu-url-field"
                     type="url"
-                    placeholder="Contoh: https://domain.com/gambar-menu.jpg atau link Google Drive"
+                    placeholder="Contoh: https://images.unsplash.com/... atau link Google Drive"
                     value={fotoUrl}
                     onChange={(e) => {
                       const converted = convertGoogleDriveUrl(e.target.value.trim());
                       setFotoUrl(converted);
                       setFotoPreview(converted); // Sync preview to URL
                     }}
-                    className="w-full px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
                   />
-                  <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-normal mt-1">
-                    💡 <strong>Tips Google Drive:</strong> Tempelkan link sharing biasa dari Google Drive. Aplikasi akan otomatis mengubahnya menjadi link gambar langsung. Pastikan akses file diatur ke <strong>"Siapa saja yang memiliki link" (Anyone with the link can view)</strong> agar gambar dapat muncul.
-                  </p>
-                  {fotoUrl && (
-                    <div className="mt-2 flex flex-col items-center">
-                      <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-1 font-semibold">Pratinjau Gambar URL:</p>
-                      <div className="relative h-24 w-24 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
-                        <img 
-                          src={fotoUrl} 
-                          alt="Preview URL" 
-                          className="object-cover w-full h-full" 
-                          onError={(e) => {
-                            e.currentTarget.src = 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=200';
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
-              )}
+
+                <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-normal">
+                  💡 <strong>Tips Google Drive:</strong> Tempelkan link sharing biasa dari Google Drive. Aplikasi akan otomatis mengubahnya menjadi link gambar langsung. Pastikan akses file diatur ke <strong>"Siapa saja yang memiliki link"</strong> agar gambar dapat muncul.
+                </p>
+
+                {fotoUrl && (
+                  <div className="mt-2 flex flex-col items-center p-2.5 bg-zinc-50 dark:bg-[#25201c]/40 rounded-xl border border-zinc-100 dark:border-zinc-800/60">
+                    <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-1.5 font-bold">Pratinjau Gambar:</p>
+                    <div className="relative h-24 w-24 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                      <img 
+                        src={fotoUrl} 
+                        alt="Preview URL" 
+                        className="object-cover w-full h-full" 
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=200';
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Submit Action */}
               <div className="pt-2 flex justify-end gap-3">
