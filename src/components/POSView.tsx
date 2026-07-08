@@ -84,7 +84,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
   const handlePrintBluetooth = async (paperSize: '58' | '80') => {
     try {
       const [txDetailsRes, settingsRes] = await Promise.all([
-        fetch(`/api/transactions`),
+        fetch(`/api/transactions?userId=${currentUser?.ID_User || ''}`),
         fetch(`/api/settings?userId=${currentUser.ID_User}`)
       ]);
       const txData = await txDetailsRes.json();

@@ -71,15 +71,13 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
     );
   }
 
-  const { summary, salesLast7Days, categoryDistribution, topSellingItems } = data || {
-    summary: { todaySales: 0, todayOrdersCount: 0, totalSalesEver: 0, salesGrowthPct: 0, todayBestItem: '-' },
-    salesLast7Days: [],
-    categoryDistribution: [],
-    topSellingItems: [],
-  };
+  const summary = data?.summary || { todaySales: 0, todayOrdersCount: 0, totalSalesEver: 0, salesGrowthPct: 0, todayBestItem: '-' };
+  const salesLast7Days = data?.salesLast7Days || [];
+  const categoryDistribution = data?.categoryDistribution || [];
+  const topSellingItems = data?.topSellingItems || [];
 
   // Find max value in last 7 days to scale our custom SVG chart
-  const maxSalesVal = Math.max(...salesLast7Days.map((d: any) => d.amount), 50000);
+  const maxSalesVal = Math.max(...(salesLast7Days || []).map((d: any) => d?.amount || 0), 50000);
 
   // Colors for categories
   const categoryColors: { [key: string]: string } = {

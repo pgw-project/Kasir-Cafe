@@ -554,6 +554,11 @@ async function startServer() {
     res.json({ success: true, message: 'Sandi berhasil diatur ulang. Silakan login kembali.' });
   });
 
+  // Health check endpoint for full-stack sensing
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
   // Users: Get all
   app.get('/api/users', (req, res) => {
     const { userId } = req.query;

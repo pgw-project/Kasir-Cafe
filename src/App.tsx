@@ -611,18 +611,34 @@ export default function App() {
                   />
                 </div>
 
-                {/* Cafe input */}
+                {/* Cafe input (Dropdown select of registered cafes to prevent typos) */}
                 <div className="space-y-1.5">
-                  <label htmlFor="reg-cafe" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">ID Outlet Cafe / Warung</label>
-                  <input
-                    id="reg-cafe"
-                    type="text"
-                    placeholder="Masukkan ID Outlet secara manual (misal: cafe-maissy-coffee)..."
-                    value={regCafeId}
-                    onChange={(e) => setRegCafeId(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c]/60 text-zinc-950 dark:text-zinc-100 text-xs font-bold focus:outline-none focus:border-amber-500 transition"
-                    required
-                  />
+                  <label htmlFor="reg-cafe" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">Pilih Outlet Cafe / Warung</label>
+                  {cafes.length > 0 ? (
+                    <select
+                      id="reg-cafe"
+                      value={regCafeId}
+                      onChange={(e) => setRegCafeId(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs font-bold focus:outline-none focus:border-amber-500 transition"
+                      required
+                    >
+                      {cafes.map((c: any) => (
+                        <option key={c.id} value={c.id} className="text-zinc-900 bg-white">
+                          {c.namaToko} ({c.id})
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id="reg-cafe"
+                      type="text"
+                      placeholder="Masukkan ID Outlet secara manual (misal: cafe-maissy-coffee)..."
+                      value={regCafeId}
+                      onChange={(e) => setRegCafeId(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c]/60 text-zinc-950 dark:text-zinc-100 text-xs font-bold focus:outline-none focus:border-amber-500 transition"
+                      required
+                    />
+                  )}
                 </div>
 
                 <button

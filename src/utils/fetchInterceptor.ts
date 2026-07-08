@@ -8,7 +8,7 @@ declare global {
   }
 }
 
-// Check initial flag from localStorage
+// Check initial flag from localStorage (honored only if explicitly set by user, never set automatically)
 const storedFlag = localStorage.getItem('forceClientFirebase');
 window.__useClientFirebase = storedFlag === 'true';
 
@@ -63,11 +63,10 @@ if (!window.__originalFetch) {
         const isHtmlResponse = contentType && contentType.includes('text/html');
 
         if (originalResponse.status === 404 || isHtmlResponse) {
-          console.warn(`[Fetch Interceptor] Express API returned ${originalResponse.status} ${isHtmlResponse ? '(HTML response detected)' : ''}. Switching to direct client-side Firestore Mode!`);
+          console.warn(`[Fetch Interceptor] Express API returned ${originalResponse.status} ${isHtmlResponse ? '(HTML response detected)' : ''}. Switching to direct client-side Firestore Mode in-memory!`);
           
-          // Activate the fallback
+          // Activate the fallback in-memory only (does not lock localStorage permanently)
           window.__useClientFirebase = true;
-          localStorage.setItem('forceClientFirebase', 'true');
 
           // Handle the request directly
           const res = await clientFirebaseRouter.handleRequest(cleanPath, init?.method || 'GET', init?.body ? JSON.parse(init.body as string) : null);
@@ -77,11 +76,10 @@ if (!window.__originalFetch) {
         return originalResponse;
       } catch (networkError: any) {
         // If there's a connection error (Server is offline / Refused connection / Timeout / DNS error)
-        console.warn('[Fetch Interceptor] Network connection failed. Switching to direct client-side Firestore Mode!', networkError);
+        console.warn('[Fetch Interceptor] Network connection failed. Switching to direct client-side Firestore Mode in-memory!', networkError);
         
-        // Activate the fallback
+        // Activate the fallback in-memory only (does not lock localStorage permanently)
         window.__useClientFirebase = true;
-        localStorage.setItem('forceClientFirebase', 'true');
 
         // Handle the request directly
         try {

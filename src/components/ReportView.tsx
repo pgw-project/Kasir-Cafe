@@ -248,14 +248,14 @@ export default function ReportView({ currentUser }: ReportViewProps) {
   const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + itemsPerPage);
 
   // Totals calculations
-  const totalOmzetFiltered = filteredTransactions.reduce((acc, cur) => acc + cur.Total_Harga, 0);
+  const totalOmzetFiltered = filteredTransactions.reduce((acc, cur) => acc + (Number(cur?.Total_Harga) || 0), 0);
 
   const { totalMakananFiltered, totalMinumanFiltered, totalQtyFiltered } = filteredTransactions.reduce((acc, tx) => {
-    const counts = getTransactionItemCounts(tx.ID_Transaksi);
+    const counts = getTransactionItemCounts(tx?.ID_Transaksi || '');
     return {
-      totalMakananFiltered: acc.totalMakananFiltered + counts.makanan,
-      totalMinumanFiltered: acc.totalMinumanFiltered + counts.minuman,
-      totalQtyFiltered: acc.totalQtyFiltered + counts.total,
+      totalMakananFiltered: acc.totalMakananFiltered + (counts?.makanan || 0),
+      totalMinumanFiltered: acc.totalMinumanFiltered + (counts?.minuman || 0),
+      totalQtyFiltered: acc.totalQtyFiltered + (counts?.total || 0),
     };
   }, { totalMakananFiltered: 0, totalMinumanFiltered: 0, totalQtyFiltered: 0 });
 
