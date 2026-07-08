@@ -288,9 +288,15 @@ async function initDatabase() {
   // Retrofit existing database with cafes and activeCafeId if missing
   if (globalDb) {
     let changed = false;
-    if (!globalDb.settings) {
-      globalDb.settings = {};
-    }
+
+    // Ensure all main collection properties exist as arrays/objects
+    if (!globalDb.users) globalDb.users = [];
+    if (!globalDb.menus) globalDb.menus = [];
+    if (!globalDb.transactions) globalDb.transactions = [];
+    if (!globalDb.transaction_details) globalDb.transaction_details = [];
+    if (!globalDb.activity_log) globalDb.activity_log = [];
+    if (!globalDb.settings) globalDb.settings = {};
+
     if (!globalDb.settings.cafes || globalDb.settings.cafes.length === 0) {
       globalDb.settings.cafes = [
         {
@@ -720,25 +726,39 @@ async function startServer() {
       }
     }
 
-    // Generate unique ID_Menu (MN-XXX)
-    const nextNum = db.menus.length > 0 
-      ? Math.max(...db.menus.map((m: Menu) => parseInt(m.ID_Menu.split('-')[1]) || 0)) + 1 
-      : 1;
+    // Generate unique ID_Menu (MN-XXX) robustly
+    let nextNum = 1;
+    if (db.menus && db.menus.length > 0) {
+      const nums = db.menus.map((m: Menu) => {
+        if (!m || !m.ID_Menu) return 0;
+        const parts = m.ID_Menu.split('-');
+        if (parts.length < 2) return 0;
+        const parsed = parseInt(parts[1], 10);
+        return isNaN(parsed) ? 0 : parsed;
+      });
+      nextNum = Math.max(...nums, 0) + 1;
+    }
     const idMenu = `MN-${String(nextNum).padStart(3, '0')}`;
 
     const newMenu: Menu = {
       ID_Menu: idMenu,
-      Kategori: kategori,
+      Kategori: kategori || 'Minuman',
       Nama_Menu: nama,
-      Harga: Number(harga),
+      Harga: isNaN(Number(harga)) ? 0 : Number(harga),
       Foto_URL: finalFotoUrl,
       Status: status || 'Tersedia',
       Created_At: new Date().toISOString(),
     };
 
+    if (!db.menus) {
+      db.menus = [];
+    }
     db.menus.push(newMenu);
 
-    const actor = db.users.find((u: User) => u.ID_User === actorId) || { Nama: 'System' };
+    const actor = (db.users && db.users.find((u: User) => u.ID_User === actorId)) || { Nama: 'System' };
+    if (!db.activity_log) {
+      db.activity_log = [];
+    }
     db.activity_log.unshift({
       Timestamp: new Date().toISOString(),
       ID_User: actorId || 'SYSTEM',
@@ -864,6 +884,25 @@ async function startServer() {
     const actor = db.users.find((u: User) => u.ID_User === actorId);
     const actorName = actor ? actor.Nama : 'System';
 
+    // Decode base64 logoUrl on the server side and save it as a local static file to keep Firestore documents small and avoid 1MB quotas!
+    let finalLogoUrl = logoUrl;
+    if (logoUrl && logoUrl.startsWith('data:')) {
+      try {
+        const matches = logoUrl.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          const fileBuffer = Buffer.from(matches[2], 'base64');
+          const fileExtension = matches[1].split('/')[1] || 'png';
+          const fileName = `logo_${Date.now()}.${fileExtension}`;
+          const filePath = path.join(UPLOADS_DIR, fileName);
+          fs.writeFileSync(filePath, fileBuffer);
+          finalLogoUrl = `/uploads/${fileName}`;
+          console.log(`[Logo Upload] Decoded and saved logo static file to ${filePath}`);
+        }
+      } catch (err) {
+        console.error('[Logo Upload] Error decoding/saving logo base64:', err);
+      }
+    }
+
     if (actor && actor.Role !== 'creator' && actor.cafeId) {
       if (!db.settings.cafes) {
         db.settings.cafes = [];
@@ -876,7 +915,7 @@ async function startServer() {
           alamat: alamat || db.settings.cafes[cafeIndex].alamat,
           telepon: telepon || db.settings.cafes[cafeIndex].telepon,
           pesanFooter: pesanFooter || db.settings.cafes[cafeIndex].pesanFooter,
-          logoUrl: logoUrl !== undefined ? logoUrl : db.settings.cafes[cafeIndex].logoUrl,
+          logoUrl: finalLogoUrl !== undefined ? finalLogoUrl : db.settings.cafes[cafeIndex].logoUrl,
         };
       }
     } else {
@@ -889,7 +928,7 @@ async function startServer() {
         googleSpreadsheetId: googleSpreadsheetId || db.settings.googleSpreadsheetId,
         googleDriveFolderId: googleDriveFolderId || db.settings.googleDriveFolderId,
         autoSync: autoSync !== undefined ? autoSync : db.settings.autoSync,
-        logoUrl: logoUrl !== undefined ? logoUrl : db.settings.logoUrl,
+        logoUrl: finalLogoUrl !== undefined ? finalLogoUrl : db.settings.logoUrl,
       };
 
       // Also update the active cafe inside db.settings.cafes so that its settings are saved!
@@ -902,7 +941,7 @@ async function startServer() {
             alamat: alamat || db.settings.cafes[cafeIndex].alamat,
             telepon: telepon || db.settings.cafes[cafeIndex].telepon,
             pesanFooter: pesanFooter || db.settings.cafes[cafeIndex].pesanFooter,
-            logoUrl: logoUrl !== undefined ? logoUrl : db.settings.cafes[cafeIndex].logoUrl,
+            logoUrl: finalLogoUrl !== undefined ? finalLogoUrl : db.settings.cafes[cafeIndex].logoUrl,
           };
         }
       }
