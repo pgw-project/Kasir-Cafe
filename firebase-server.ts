@@ -109,6 +109,30 @@ export async function loadFromFirestore() {
 }
 
 /**
+ * Recursively cleans undefined values and replaces them with null (or strips them)
+ * to prevent Firestore "Cannot serialize undefined value" exceptions.
+ */
+function cleanUndefined(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => cleanUndefined(item));
+  }
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (val !== undefined) {
+        cleaned[key] = cleanUndefined(val);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
+/**
  * Synchronizes an in-memory collection with Firestore by adding/updating current items and deleting orphans.
  */
 export async function syncCollection(col: string, newItems: any[]) {
@@ -119,7 +143,8 @@ export async function syncCollection(col: string, newItems: any[]) {
   
   try {
     if (col === 'settings') {
-      await firestore.collection('settings').doc('global').set(newItems);
+      const cleanedSettings = cleanUndefined(newItems);
+      await firestore.collection('settings').doc('global').set(cleanedSettings);
       console.log('[Firestore] Settings synced to cloud.');
       return;
     }
@@ -159,7 +184,8 @@ export async function syncCollection(col: string, newItems: any[]) {
     // 3. Set or update all active items
     for (const item of newItems) {
       const id = item[idKey] || `log_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-      batch.set(firestore.collection(col).doc(id), item);
+      const cleanedItem = cleanUndefined(item);
+      batch.set(firestore.collection(col).doc(id), cleanedItem);
       opCount++;
       if (opCount >= 400) {
         await batch.commit();

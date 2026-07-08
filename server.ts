@@ -718,8 +718,9 @@ async function startServer() {
           const fileName = `${Date.now()}_${fotoFileName || 'uploaded_image.png'}`;
           const filePath = path.join(UPLOADS_DIR, fileName);
           fs.writeFileSync(filePath, fileBuffer);
-          finalFotoUrl = `/uploads/${fileName}`;
-          console.log(`Successfully saved uploaded menu photo to ${filePath}`);
+          // Keep base64 string in database for 100% cloud run persistence, but write local backup
+          finalFotoUrl = fotoBase64;
+          console.log(`Successfully saved uploaded menu photo backup to ${filePath}`);
         }
       } catch (err) {
         console.error('Error decoding/saving menu photo base64:', err);
@@ -793,7 +794,9 @@ async function startServer() {
           const fileName = `${Date.now()}_${fotoFileName || 'uploaded_image.png'}`;
           const filePath = path.join(UPLOADS_DIR, fileName);
           fs.writeFileSync(filePath, fileBuffer);
-          finalFotoUrl = `/uploads/${fileName}`;
+          // Keep base64 string in database for 100% cloud run persistence, but write local backup
+          finalFotoUrl = fotoBase64;
+          console.log(`Successfully saved uploaded menu photo backup during update to ${filePath}`);
         }
       } catch (err) {
         console.error('Error decoding/saving menu photo base64 during update:', err);
@@ -884,7 +887,7 @@ async function startServer() {
     const actor = db.users.find((u: User) => u.ID_User === actorId);
     const actorName = actor ? actor.Nama : 'System';
 
-    // Decode base64 logoUrl on the server side and save it as a local static file to keep Firestore documents small and avoid 1MB quotas!
+    // Decode base64 logoUrl on the server side and save it as a local static file
     let finalLogoUrl = logoUrl;
     if (logoUrl && logoUrl.startsWith('data:')) {
       try {
@@ -895,8 +898,8 @@ async function startServer() {
           const fileName = `logo_${Date.now()}.${fileExtension}`;
           const filePath = path.join(UPLOADS_DIR, fileName);
           fs.writeFileSync(filePath, fileBuffer);
-          finalLogoUrl = `/uploads/${fileName}`;
-          console.log(`[Logo Upload] Decoded and saved logo static file to ${filePath}`);
+          // We keep finalLogoUrl as the base64 string itself so it persists inside Firestore settings document forever!
+          console.log(`[Logo Upload] Decoded and saved logo static file backup to ${filePath}`);
         }
       } catch (err) {
         console.error('[Logo Upload] Error decoding/saving logo base64:', err);

@@ -14,6 +14,45 @@ interface MenuViewProps {
   onAddLog: (action: string, module: string, desc: string) => void;
 }
 
+// Helper function to resize and compress base64 images client-side before sending to server
+const resizeAndCompressImage = (file: File, maxWidth: number, maxHeight: number, callback: (base64: string) => void) => {
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        // Compress as JPEG with 0.8 quality to keep size small (~20-40KB)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        callback(dataUrl);
+      } else {
+        callback(event.target?.result as string);
+      }
+    };
+    img.src = event.target?.result as string;
+  };
+  reader.readAsDataURL(file);
+};
+
 export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
   const [menus, setMenus] = useState<Menu[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,7 +144,7 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
       fotoBase64: '',
       fotoFileName: '',
       fotoUrl: convertGoogleDriveUrl(fotoUrl),
-      actorId: currentUser.ID_User,
+      actorId: currentUser?.ID_User || 'SYSTEM',
     };
 
     try {
@@ -141,7 +180,7 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
     const { id } = menuToDelete;
 
     try {
-      const res = await fetch(`/api/menus/${id}?actorId=${currentUser.ID_User}`, {
+      const res = await fetch(`/api/menus/${id}?actorId=${currentUser?.ID_User || 'SYSTEM'}`, {
         method: 'DELETE',
       });
       const result = await res.json();
@@ -447,36 +486,68 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                 </div>
               </div>
 
-              {/* URL Input Field */}
+              {/* URL Input Field & File Uploader */}
               <div className="space-y-3.5">
                 <div className="space-y-1.5">
                   <label htmlFor="menu-url-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 block">
-                    URL Gambar Menu (Format HTTP/HTTPS)
+                    Unggah Gambar Baru ATAU Masukkan URL Gambar
                   </label>
-                  <input
-                    id="menu-url-field"
-                    type="url"
-                    placeholder="Contoh: https://images.unsplash.com/... atau link Google Drive"
-                    value={fotoUrl}
-                    onChange={(e) => {
-                      const converted = convertGoogleDriveUrl(e.target.value.trim());
-                      setFotoUrl(converted);
-                      setFotoPreview(converted); // Sync preview to URL
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
-                  />
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div className="flex-1">
+                      <input
+                        id="menu-url-field"
+                        type="url"
+                        placeholder="Contoh: https://images.unsplash.com/... atau link Google Drive"
+                        value={fotoUrl.startsWith('data:') ? '' : fotoUrl}
+                        onChange={(e) => {
+                          const converted = convertGoogleDriveUrl(e.target.value.trim());
+                          setFotoUrl(converted);
+                          setFotoPreview(converted); // Sync preview to URL
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <input 
+                        type="file" 
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            if (file.size > 2 * 1024 * 1024) {
+                              alert("Ukuran gambar tidak boleh lebih dari 2MB!");
+                              return;
+                            }
+                            resizeAndCompressImage(file, 400, 400, (compressedBase64) => {
+                              setFotoUrl(compressedBase64);
+                              setFotoPreview(compressedBase64);
+                            });
+                          }
+                        }}
+                        className="hidden" 
+                        id="menu-upload-input"
+                      />
+                      <label 
+                        htmlFor="menu-upload-input"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition cursor-pointer"
+                      >
+                        <Upload className="h-3.5 w-3.5" />
+                        Pilih File
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-normal">
-                  💡 <strong>Tips Google Drive:</strong> Tempelkan link sharing biasa dari Google Drive. Aplikasi akan otomatis mengubahnya menjadi link gambar langsung. Pastikan akses file diatur ke <strong>"Siapa saja yang memiliki link"</strong> agar gambar dapat muncul.
+                  💡 <strong>Tips Gambar:</strong> Anda bisa mengunggah file gambar (JPG/PNG) secara langsung dari perangkat Anda (akan otomatis dikompres untuk menghemat kapasitas database), atau tempelkan link dari internet atau Google Drive.
                 </p>
 
-                {fotoUrl && (
-                  <div className="mt-2 flex flex-col items-center p-2.5 bg-zinc-50 dark:bg-[#25201c]/40 rounded-xl border border-zinc-100 dark:border-zinc-800/60">
+                {fotoPreview && (
+                  <div className="mt-2 flex flex-col items-center p-2.5 bg-zinc-50 dark:bg-[#25201c]/40 rounded-xl border border-zinc-100 dark:border-zinc-800/60 relative">
                     <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mb-1.5 font-bold">Pratinjau Gambar:</p>
                     <div className="relative h-24 w-24 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm">
                       <img 
-                        src={fotoUrl} 
+                        src={fotoPreview} 
                         alt="Preview URL" 
                         className="object-cover w-full h-full" 
                         onError={(e) => {
@@ -484,6 +555,17 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                         }}
                       />
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFotoUrl('');
+                        setFotoPreview('');
+                      }}
+                      className="absolute top-2 right-2 p-1 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-700 transition"
+                      title="Hapus gambar"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </div>
                 )}
               </div>
