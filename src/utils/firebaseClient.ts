@@ -238,7 +238,16 @@ export const clientFirebaseRouter = {
     // 4. CRUD: Users
     if (cleanPath === '/users' && method === 'GET') {
       const ldb = getLocalDb();
-      return { ok: true, status: 200, data: ldb.get('users') };
+      const users = ldb.get('users') || [];
+      const urlObj = new URL(path, window.location.origin);
+      const userIdParam = urlObj.searchParams.get('userId');
+      if (userIdParam) {
+        const currentUser = users.find((u: any) => u.ID_User === userIdParam);
+        if (currentUser && currentUser.Role !== 'creator' && currentUser.cafeId) {
+          return { ok: true, status: 200, data: users.filter((u: any) => u.cafeId === currentUser.cafeId) };
+        }
+      }
+      return { ok: true, status: 200, data: users };
     }
     if (cleanPath === '/users' && method === 'POST') {
       const ldb = getLocalDb();
@@ -682,9 +691,32 @@ export const clientFirebaseRouter = {
     // 8. Transactions
     if (cleanPath === '/transactions' && method === 'GET') {
       const ldb = getLocalDb();
-      const list = ldb.get('transactions');
-      list.sort((a: any, b: any) => new Date(b.Tanggal).getTime() - new Date(a.Tanggal).getTime());
-      return { ok: true, status: 200, data: list };
+      const transactions = ldb.get('transactions') || [];
+      const details = ldb.get('transaction_details') || [];
+      
+      const urlObj = new URL(path, window.location.origin);
+      const userIdParam = urlObj.searchParams.get('userId');
+      
+      const users = ldb.get('users') || [];
+      let targetCafeId = ldb.get('settings')?.activeCafeId || 'cafe-maissy-coffee';
+      if (userIdParam) {
+        const currentUser = users.find((u: any) => u.ID_User === userIdParam);
+        if (currentUser && currentUser.Role !== 'creator' && currentUser.cafeId) {
+          targetCafeId = currentUser.cafeId;
+        }
+      }
+      
+      const filteredTransactions = transactions.filter((tx: any) => {
+        const txCafeId = tx.cafeId || 'cafe-maissy-coffee';
+        return txCafeId === targetCafeId;
+      });
+      
+      filteredTransactions.sort((a: any, b: any) => new Date(b.Tanggal).getTime() - new Date(a.Tanggal).getTime());
+      
+      const txIds = new Set(filteredTransactions.map((tx: any) => tx.ID_Transaksi));
+      const filteredDetails = details.filter((dtl: any) => txIds.has(dtl.ID_Transaksi));
+      
+      return { ok: true, status: 200, data: { transactions: filteredTransactions, details: filteredDetails } };
     }
     if (cleanPath === '/transactions' && method === 'POST') {
       const ldb = getLocalDb();
@@ -730,6 +762,9 @@ export const clientFirebaseRouter = {
           };
         });
 
+        const users = ldb.get('users') || [];
+        const actor = users.find((u: any) => u.ID_User === actorId) || { Nama: cashierName || 'Kasir' };
+
         finalTx = {
           ID_Transaksi: txId,
           Tanggal: new Date().toISOString(),
@@ -742,11 +777,10 @@ export const clientFirebaseRouter = {
           PDF_URL: `/api/receipt/${txId}/print`,
           Status: 'Paid',
           Metode_Bayar: metodeBayar || 'TUNAI',
+          cafeId: (actor as any).cafeId || ldb.get('settings')?.activeCafeId || 'cafe-maissy-coffee',
         };
 
         // Add log
-        const users = ldb.get('users') || [];
-        const actor = users.find((u: any) => u.ID_User === actorId) || { Nama: cashierName || 'Kasir' };
         const logs = ldb.get('activity_log') || [];
         logs.unshift({
           Timestamp: new Date().toISOString(),
@@ -762,7 +796,11 @@ export const clientFirebaseRouter = {
         // Fallback to legacy format: { transaction, details }
         const { transaction, details } = body || {};
         const txId = transaction?.ID_Transaksi || `tx_${Date.now()}`;
-        finalTx = { ...transaction, ID_Transaksi: txId };
+        finalTx = { 
+          ...transaction, 
+          ID_Transaksi: txId,
+          cafeId: transaction?.cafeId || ldb.get('settings')?.activeCafeId || 'cafe-maissy-coffee'
+        };
         
         finalDetails = (details || []).map((det: any, idx: number) => {
           const detId = det.ID_Detail || `det_${Date.now()}_${idx}`;
@@ -782,9 +820,30 @@ export const clientFirebaseRouter = {
     // 9. Analytics report
     if (cleanPath === '/reports/analytics' && method === 'GET') {
       const ldb = getLocalDb();
-      const transactions: Transaction[] = ldb.get('transactions');
-      const details: TransactionDetail[] = ldb.get('transaction_details');
-      const menus: Menu[] = ldb.get('menus');
+      const allTransactions: Transaction[] = ldb.get('transactions') || [];
+      const allDetails: TransactionDetail[] = ldb.get('transaction_details') || [];
+      const menus: Menu[] = ldb.get('menus') || [];
+
+      const urlObj = new URL(path, window.location.origin);
+      const userIdParam = urlObj.searchParams.get('userId');
+      
+      const users = ldb.get('users') || [];
+      let targetCafeId = ldb.get('settings')?.activeCafeId || 'cafe-maissy-coffee';
+      if (userIdParam) {
+        const currentUser = users.find((u: any) => u.ID_User === userIdParam);
+        if (currentUser && currentUser.Role !== 'creator' && currentUser.cafeId) {
+          targetCafeId = currentUser.cafeId;
+        }
+      }
+
+      // Filter transactions and details by cafeId
+      const transactions = allTransactions.filter((tx: any) => {
+        const txCafeId = tx.cafeId || 'cafe-maissy-coffee';
+        return txCafeId === targetCafeId;
+      });
+
+      const txIds = new Set(transactions.map((tx: any) => tx.ID_Transaksi));
+      const details = allDetails.filter((dtl: any) => txIds.has(dtl.ID_Transaksi));
 
       const now = new Date();
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());

@@ -10,7 +10,7 @@ import './index.css';
 const isCloudRun = window.location.hostname.includes('run.app');
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-if (isCloudRun || (isLocalhost && import.meta.env.DEV)) {
+if (isCloudRun || (isLocalhost && (import.meta as any).env?.DEV)) {
   localStorage.removeItem('forceClientFirebase');
 } else {
   localStorage.setItem('forceClientFirebase', 'true');
