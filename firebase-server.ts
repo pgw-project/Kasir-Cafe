@@ -107,14 +107,19 @@ export async function authenticateServer() {
     await signInWithEmailAndPassword(auth, email, password);
     console.log('[Firebase Server] System account successfully authenticated on Firestore.');
   } catch (signInError: any) {
-    // Handle registration if user doesn't exist
-    if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/invalid-email') {
+    if (signInError.code === 'auth/operation-not-allowed') {
+      console.warn('[Firebase Server] Email/Password Sign-in provider is disabled in Firebase Console. Please enable the Email/Password provider under Authentication -> Sign-in method in the Firebase Console if you wish to enable server-side database synchronization, otherwise the app continues with local cache.');
+    } else if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/invalid-email') {
       console.log('[Firebase Server] System account not found. Registering system account programmatically...');
       try {
         await createUserWithEmailAndPassword(auth, email, password);
         console.log('[Firebase Server] System account programmatically created and signed in.');
       } catch (createError: any) {
-        console.error('[Firebase Server] Failed to create system account (make sure Email/Password Auth is enabled in Console):', createError.message);
+        if (createError.code === 'auth/operation-not-allowed') {
+          console.warn('[Firebase Server] Email/Password Sign-in provider is disabled in Firebase Console. Please enable the Email/Password provider under Authentication -> Sign-in method in the Firebase Console if you wish to enable server-side database synchronization, otherwise the app continues with local cache.');
+        } else {
+          console.error('[Firebase Server] Failed to create system account (make sure Email/Password Auth is enabled in Console):', createError.message);
+        }
       }
     } else {
       console.error('[Firebase Server] Authentication failed:', signInError.message);

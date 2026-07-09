@@ -789,14 +789,38 @@ async function startServer() {
 
   // Menus: Get all
   app.get('/api/menus', (req, res) => {
+    const { userId } = req.query;
     const db = readDB();
-    res.json(db.menus);
+
+    // Determine the active/assigned cafe ID
+    let targetCafeId = db.settings.activeCafeId || 'cafe-maissy-coffee';
+    if (userId) {
+      const user = db.users.find((u: User) => u.ID_User === String(userId));
+      if (user && user.Role !== 'creator') {
+        targetCafeId = user.cafeId || 'cafe-maissy-coffee';
+      }
+    }
+
+    const filteredMenus = (db.menus || []).filter((m: any) => {
+      const menuCafeId = m.cafeId || 'cafe-maissy-coffee';
+      return menuCafeId === targetCafeId;
+    });
+
+    res.json(filteredMenus);
   });
 
   // Menus: Save / CRUD
   app.post('/api/menus', requireAdmin, (req, res) => {
     const { nama, kategori, harga, status, fotoBase64, fotoFileName, fotoUrl, actorId } = req.body;
     const db = readDB();
+
+    let targetCafeId = db.settings.activeCafeId || 'cafe-maissy-coffee';
+    if (actorId) {
+      const user = db.users.find((u: User) => u.ID_User === actorId);
+      if (user && user.Role !== 'creator') {
+        targetCafeId = user.cafeId || 'cafe-maissy-coffee';
+      }
+    }
 
     let finalFotoUrl = fotoUrl || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=200'; // Default
 
@@ -827,6 +851,7 @@ async function startServer() {
       Foto_URL: finalFotoUrl,
       Status: status || 'Tersedia',
       Created_At: new Date().toISOString(),
+      cafeId: targetCafeId,
     };
 
     if (!db.menus) {
@@ -927,8 +952,9 @@ async function startServer() {
     
     if (userId) {
       const user = db.users.find((u: User) => u.ID_User === String(userId));
-      if (user && user.Role !== 'creator' && user.cafeId) {
-        const userCafe = db.settings.cafes?.find((c: any) => c.id === user.cafeId);
+      if (user && user.Role !== 'creator') {
+        const userCafeId = user.cafeId || 'cafe-maissy-coffee';
+        const userCafe = db.settings.cafes?.find((c: any) => c.id === userCafeId);
         if (userCafe) {
           settingsResponse = {
             ...settingsResponse,
@@ -937,6 +963,8 @@ async function startServer() {
             telepon: userCafe.telepon,
             pesanFooter: userCafe.pesanFooter,
             logoUrl: userCafe.logoUrl,
+            qrisPayload: userCafe.qrisPayload,
+            qrisImageUrl: userCafe.qrisImageUrl,
           };
         }
       }
@@ -946,7 +974,7 @@ async function startServer() {
   });
 
   app.put('/api/settings', requireAdmin, (req, res) => {
-    const { namaToko, alamat, telepon, pesanFooter, googleSpreadsheetId, googleDriveFolderId, autoSync, logoUrl, actorId } = req.body;
+    const { namaToko, alamat, telepon, pesanFooter, googleSpreadsheetId, googleDriveFolderId, autoSync, logoUrl, qrisPayload, qrisImageUrl, actorId } = req.body;
     const db = readDB();
 
     const actor = db.users.find((u: User) => u.ID_User === actorId);
@@ -954,11 +982,12 @@ async function startServer() {
 
     let finalLogoUrl = logoUrl;
 
-    if (actor && actor.Role !== 'creator' && actor.cafeId) {
+    if (actor && actor.Role !== 'creator') {
+      const actorCafeId = actor.cafeId || 'cafe-maissy-coffee';
       if (!db.settings.cafes) {
         db.settings.cafes = [];
       }
-      const cafeIndex = db.settings.cafes.findIndex((c: any) => c.id === actor.cafeId);
+      const cafeIndex = db.settings.cafes.findIndex((c: any) => c.id === actorCafeId);
       if (cafeIndex !== -1) {
         db.settings.cafes[cafeIndex] = {
           ...db.settings.cafes[cafeIndex],
@@ -967,15 +996,19 @@ async function startServer() {
           telepon: telepon || db.settings.cafes[cafeIndex].telepon,
           pesanFooter: pesanFooter || db.settings.cafes[cafeIndex].pesanFooter,
           logoUrl: finalLogoUrl !== undefined ? finalLogoUrl : db.settings.cafes[cafeIndex].logoUrl,
+          qrisPayload: qrisPayload !== undefined ? qrisPayload : db.settings.cafes[cafeIndex].qrisPayload,
+          qrisImageUrl: qrisImageUrl !== undefined ? qrisImageUrl : db.settings.cafes[cafeIndex].qrisImageUrl,
         };
 
         // If this is the active cafe, ALSO update the top-level settings so they are in sync!
-        if (db.settings.activeCafeId === actor.cafeId) {
+        if (db.settings.activeCafeId === actorCafeId) {
           db.settings.namaToko = db.settings.cafes[cafeIndex].namaToko;
           db.settings.alamat = db.settings.cafes[cafeIndex].alamat;
           db.settings.telepon = db.settings.cafes[cafeIndex].telepon;
           db.settings.pesanFooter = db.settings.cafes[cafeIndex].pesanFooter;
           db.settings.logoUrl = db.settings.cafes[cafeIndex].logoUrl;
+          db.settings.qrisPayload = db.settings.cafes[cafeIndex].qrisPayload;
+          db.settings.qrisImageUrl = db.settings.cafes[cafeIndex].qrisImageUrl;
         }
       }
     } else {
@@ -989,6 +1022,8 @@ async function startServer() {
         googleDriveFolderId: googleDriveFolderId || db.settings.googleDriveFolderId,
         autoSync: autoSync !== undefined ? autoSync : db.settings.autoSync,
         logoUrl: finalLogoUrl !== undefined ? finalLogoUrl : db.settings.logoUrl,
+        qrisPayload: qrisPayload !== undefined ? qrisPayload : db.settings.qrisPayload,
+        qrisImageUrl: qrisImageUrl !== undefined ? qrisImageUrl : db.settings.qrisImageUrl,
       };
 
       // Also update the active cafe inside db.settings.cafes so that its settings are saved!
@@ -1002,6 +1037,8 @@ async function startServer() {
             telepon: telepon || db.settings.cafes[cafeIndex].telepon,
             pesanFooter: pesanFooter || db.settings.cafes[cafeIndex].pesanFooter,
             logoUrl: finalLogoUrl !== undefined ? finalLogoUrl : db.settings.cafes[cafeIndex].logoUrl,
+            qrisPayload: qrisPayload !== undefined ? qrisPayload : db.settings.cafes[cafeIndex].qrisPayload,
+            qrisImageUrl: qrisImageUrl !== undefined ? qrisImageUrl : db.settings.cafes[cafeIndex].qrisImageUrl,
           };
         }
       }
@@ -1263,8 +1300,8 @@ async function startServer() {
     let targetCafeId = db.settings.activeCafeId || 'cafe-maissy-coffee';
     if (userId) {
       const user = db.users.find((u: User) => u.ID_User === String(userId));
-      if (user && user.Role !== 'creator' && user.cafeId) {
-        targetCafeId = user.cafeId;
+      if (user && user.Role !== 'creator') {
+        targetCafeId = user.cafeId || 'cafe-maissy-coffee';
       }
     }
 
@@ -1323,7 +1360,7 @@ async function startServer() {
       };
     });
 
-    const actor = db.users.find((u: User) => u.ID_User === actorId) || { Nama: cashierName || 'Kasir' };
+    const actor = db.users.find((u: User) => u.ID_User === actorId) || { Nama: cashierName || 'Kasir', Role: 'kasir' };
     const newTx: Transaction = {
       ID_Transaksi: txId,
       Tanggal: new Date().toISOString(),
@@ -1336,7 +1373,7 @@ async function startServer() {
       PDF_URL: `/api/receipt/${txId}/print`,
       Status: 'Paid',
       Metode_Bayar: metodeBayar || 'TUNAI',
-      cafeId: (actor as any).cafeId || db.settings?.activeCafeId || 'cafe-maissy-coffee',
+      cafeId: (actor as any).Role !== 'creator' ? ((actor as any).cafeId || 'cafe-maissy-coffee') : (db.settings?.activeCafeId || 'cafe-maissy-coffee'),
     };
 
     db.transactions.unshift(newTx); // Newest first
@@ -1377,6 +1414,9 @@ async function startServer() {
           alamat: txCafe.alamat,
           telepon: txCafe.telepon,
           pesanFooter: txCafe.pesanFooter,
+          logoUrl: txCafe.logoUrl,
+          qrisPayload: txCafe.qrisPayload,
+          qrisImageUrl: txCafe.qrisImageUrl,
         };
       }
     }
@@ -1396,12 +1436,58 @@ async function startServer() {
       paddingStyle = '15mm';
     }
 
+    // Code39 Generator function
+    function generateCode39Svg(text: string): string {
+      const code39Map: Record<string, string> = {
+        '0': '000110100', '1': '100100001', '2': '001100001', '3': '101100000',
+        '4': '000110001', '5': '100110000', '6': '001110000', '7': '000100101',
+        '8': '100100100', '9': '001100100', 'A': '100001001', 'B': '001001001',
+        'C': '101001000', 'D': '000011001', 'E': '100011000', 'F': '001011000',
+        'G': '000001101', 'H': '100001100', 'I': '001001100', 'J': '000011100',
+        'K': '100000011', 'L': '001000011', 'M': '101000010', 'N': '000010011',
+        'O': '100010010', 'P': '001010010', 'Q': '000000111', 'R': '100000110',
+        'S': '001000110', 'T': '000010110', 'U': '110000001', 'V': '011000001',
+        'W': '111000000', 'X': '010010001', 'Y': '110010000', 'Z': '011010000',
+        '-': '010000101', '.': '110000100', ' ': '011000100', '*': '010010100',
+        '$': '010101000', '/': '010100010', '+': '010001010', '%': '000101010'
+      };
+
+      const formattedText = '*' + text.toUpperCase() + '*';
+      let svgContent = '';
+      let x = 10;
+      
+      for (let i = 0; i < formattedText.length; i++) {
+        const char = formattedText[i];
+        const pattern = code39Map[char] || code39Map[' '];
+        
+        for (let bar = 0; bar < 9; bar++) {
+          const isBlack = (bar % 2 === 0);
+          const isWide = pattern[bar] === '1';
+          const width = isWide ? 3 : 1;
+          
+          if (isBlack) {
+            svgContent += `<rect x="${x}" y="5" width="${width}" height="35" fill="black" />`;
+          }
+          x += width;
+        }
+        x += 1;
+      }
+      
+      return `
+        <svg width="220" height="55" viewBox="0 0 ${x + 10} 55" xmlns="http://www.w3.org/2000/svg" style="display: block; margin: 8px auto;">
+          ${svgContent}
+          <text x="${(x + 10) / 2}" y="50" font-family="monospace" font-size="9" text-anchor="middle" fill="black">${text}</text>
+        </svg>
+      `;
+    }
+
     const html = `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <title>Struk Belanja ${tx.ID_Transaksi}</title>
+        <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
         <style>
           body {
             font-family: 'Courier New', Courier, monospace;
@@ -1525,6 +1611,16 @@ async function startServer() {
           </tr>
         </table>
         
+        ${tx.Metode_Bayar === 'QRIS' ? `
+          <div class="divider"></div>
+          <div class="text-center" style="margin: 15px 0;">
+            <p style="font-weight: bold; margin: 5px 0; font-size: 11px;">--- STRUK QRIS (LUNAS) ---</p>
+            <p style="margin: 3px 0; font-size: 9px; color: #555;">Scan QR di bawah untuk pembayaran:</p>
+            
+            <div id="qris-qr-container" style="margin: 12px auto; display: flex; justify-content: center; align-items: center; width: 140px; height: 140px; background: #fff; padding: 5px; border: 1px solid #eee; box-sizing: border-box;"></div>
+          </div>
+        ` : ''}
+
         <div class="divider"></div>
         
         <div class="footer text-center">
@@ -1533,9 +1629,31 @@ async function startServer() {
         </div>
         
         <script>
-          // Auto trigger print in printable preview mode
-          window.onload = function() {
-            // Optional auto print if inside iframe
+          // Client-side QR generation
+          try {
+            var qrisPayload = \`${settings.qrisPayload || ''}\`;
+            var qrisImageUrl = \`${settings.qrisImageUrl || ''}\`;
+            var container = document.getElementById('qris-qr-container');
+
+            if (container) {
+              if (qrisImageUrl) {
+                // If owner uploaded a QRIS image, show it directly!
+                container.innerHTML = '<img src="' + qrisImageUrl + '" style="max-width: 100%; max-height: 100%; object-fit: contain;" />';
+              } else if (qrisPayload) {
+                // If owner specified a QRIS text payload, generate QR Code
+                var typeNumber = 0;
+                var errorCorrectionLevel = 'M';
+                var qr = qrcode(typeNumber, errorCorrectionLevel);
+                qr.addData(qrisPayload);
+                qr.make();
+                container.innerHTML = qr.createSvgTag(4, 0);
+              } else {
+                // Fallback / No QRIS
+                container.innerHTML = '<div style="font-size: 9px; color: #888; padding: 15px; border: 1px dashed #ccc;">QRIS Owner belum diunggah.<br>Silakan atur di Pengaturan.</div>';
+              }
+            }
+          } catch(e) {
+            console.error('Failed to render local QR:', e);
           }
         </script>
       </body>
@@ -1554,8 +1672,8 @@ async function startServer() {
     let targetCafeId = db.settings.activeCafeId || 'cafe-maissy-coffee';
     if (userId) {
       const user = db.users.find((u: User) => u.ID_User === String(userId));
-      if (user && user.Role !== 'creator' && user.cafeId) {
-        targetCafeId = user.cafeId;
+      if (user && user.Role !== 'creator') {
+        targetCafeId = user.cafeId || 'cafe-maissy-coffee';
       }
     }
 

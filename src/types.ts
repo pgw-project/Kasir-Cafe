@@ -22,6 +22,7 @@ export interface Menu {
   Foto_URL: string;
   Status: 'Tersedia' | 'Habis';
   Created_At: string;
+  cafeId?: string;
 }
 
 export interface Transaction {
@@ -65,6 +66,8 @@ export interface Cafe {
   telepon: string;
   pesanFooter: string;
   logoUrl?: string;
+  qrisPayload?: string;
+  qrisImageUrl?: string;
   Created_At?: string;
 }
 
@@ -74,6 +77,8 @@ export interface Settings {
   telepon: string;
   pesanFooter: string;
   logoUrl?: string;
+  qrisPayload?: string;
+  qrisImageUrl?: string;
   googleSpreadsheetId: string;
   googleDriveFolderId: string;
   autoSync: boolean;

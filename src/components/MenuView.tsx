@@ -85,7 +85,7 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
   const fetchMenus = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/menus');
+      const res = await fetch(`/api/menus?userId=${currentUser?.ID_User || ''}`);
       const data = await res.json();
       setMenus(data);
     } catch (err) {

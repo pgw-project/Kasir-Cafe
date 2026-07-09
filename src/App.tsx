@@ -432,7 +432,7 @@ export default function App() {
     { id: 'pos', label: 'Transaksi POS', icon: ShoppingCart, roles: ['admin', 'kasir'] },
     { id: 'menu', label: 'Katalog Menu (CRUD)', icon: BookOpen, roles: ['admin'] },
     { id: 'users', label: 'Kelola Pengguna', icon: Users, roles: ['admin'] },
-    { id: 'reports', label: 'Laporan Penjualan', icon: FileText, roles: ['admin'] },
+    { id: 'reports', label: 'Laporan Penjualan', icon: FileText, roles: ['admin', 'kasir'] },
     { id: 'logs', label: 'Audit Trail Logs', icon: KeyRound, roles: [] },
     { id: 'settings', label: 'Pengaturan Kafe', icon: SettingsIcon, roles: ['admin'] },
   ];

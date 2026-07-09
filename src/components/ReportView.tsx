@@ -27,7 +27,9 @@ export default function ReportView({ currentUser }: ReportViewProps) {
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterPreset, setFilterPreset] = useState<'all' | 'today' | 'last7' | 'month'>('all');
+  const [filterPreset, setFilterPreset] = useState<'all' | 'today' | 'last7' | 'month'>(
+    currentUser?.Role === 'kasir' ? 'today' : 'all'
+  );
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -148,7 +150,7 @@ export default function ReportView({ currentUser }: ReportViewProps) {
       setLoading(true);
       const [transRes, menusRes] = await Promise.all([
         fetch(`/api/transactions?userId=${currentUser?.ID_User || ''}`),
-        fetch('/api/menus')
+        fetch(`/api/menus?userId=${currentUser?.ID_User || ''}`)
       ]);
       const transData = await transRes.json();
       const menusData = await menusRes.json();
@@ -216,26 +218,31 @@ export default function ReportView({ currentUser }: ReportViewProps) {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    if (filterPreset === 'today') {
+    // If role is kasir, strictly enforce only today's transactions and ignore other filters
+    if (currentUser?.Role === 'kasir') {
       if (txDate < startOfToday) return false;
-    } else if (filterPreset === 'last7') {
-      const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
-      if (txDate < sevenDaysAgo) return false;
-    } else if (filterPreset === 'month') {
-      const firstDayOfMonth = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1);
-      if (txDate < firstDayOfMonth) return false;
-    }
+    } else {
+      if (filterPreset === 'today') {
+        if (txDate < startOfToday) return false;
+      } else if (filterPreset === 'last7') {
+        const sevenDaysAgo = new Date(startOfToday.getTime() - 7 * 24 * 60 * 60 * 1000);
+        if (txDate < sevenDaysAgo) return false;
+      } else if (filterPreset === 'month') {
+        const firstDayOfMonth = new Date(startOfToday.getFullYear(), startOfToday.getMonth(), 1);
+        if (txDate < firstDayOfMonth) return false;
+      }
 
-    // Custom range
-    if (startDate) {
-      const sDate = new Date(startDate);
-      sDate.setHours(0, 0, 0, 0);
-      if (txDate < sDate) return false;
-    }
-    if (endDate) {
-      const eDate = new Date(endDate);
-      eDate.setHours(23, 59, 59, 999);
-      if (txDate > eDate) return false;
+      // Custom range
+      if (startDate) {
+        const sDate = new Date(startDate);
+        sDate.setHours(0, 0, 0, 0);
+        if (txDate < sDate) return false;
+      }
+      if (endDate) {
+        const eDate = new Date(endDate);
+        eDate.setHours(23, 59, 59, 999);
+        if (txDate > eDate) return false;
+      }
     }
 
     return true;
@@ -377,78 +384,87 @@ export default function ReportView({ currentUser }: ReportViewProps) {
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-          {/* Preset Buttons */}
-          <div className="md:col-span-4 space-y-1.5">
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Pilihan Preset</span>
-            <div className="grid grid-cols-4 gap-1.5">
-              {(['all', 'today', 'last7', 'month'] as const).map((preset) => {
-                const labels = { all: 'Semua', today: 'Hari Ini', last7: '7 Hari', month: 'Bulan' };
-                return (
-                  <button
-                    key={preset}
-                    id={`filter-preset-${preset}`}
-                    onClick={() => {
-                      setFilterPreset(preset);
-                      setStartDate('');
-                      setEndDate('');
-                    }}
-                    className={`py-2 text-[10px] font-extrabold rounded-lg border cursor-pointer transition text-center
-                      ${filterPreset === preset 
-                        ? 'bg-amber-600 text-white border-amber-600' 
-                        : 'bg-zinc-50 dark:bg-[#25201c] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100'}`}
-                  >
-                    {labels[preset]}
-                  </button>
-                );
-              })}
+          {currentUser?.Role === 'kasir' ? (
+            <div className="md:col-span-9 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
+              <Calendar className="h-4.5 w-4.5 text-amber-600 dark:text-amber-500 flex-shrink-0" />
+              <span>Akses Terbatas Kasir: Laporan otomatis dikunci hanya untuk menampilkan transaksi Hari Ini.</span>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Preset Buttons */}
+              <div className="md:col-span-4 space-y-1.5">
+                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Pilihan Preset</span>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {(['all', 'today', 'last7', 'month'] as const).map((preset) => {
+                    const labels = { all: 'Semua', today: 'Hari Ini', last7: '7 Hari', month: 'Bulan' };
+                    return (
+                      <button
+                        key={preset}
+                        id={`filter-preset-${preset}`}
+                        onClick={() => {
+                          setFilterPreset(preset);
+                          setStartDate('');
+                          setEndDate('');
+                        }}
+                        className={`py-2 text-[10px] font-extrabold rounded-lg border cursor-pointer transition text-center
+                          ${filterPreset === preset 
+                            ? 'bg-amber-600 text-white border-amber-600' 
+                            : 'bg-zinc-50 dark:bg-[#25201c] text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100'}`}
+                      >
+                        {labels[preset]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-          {/* Custom Date Range */}
-          <div className="md:col-span-5 grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label htmlFor="start-date-picker" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Tanggal Mulai</label>
-              <input
-                id="start-date-picker"
-                type="date"
-                value={startDate}
-                max={getTodayString()}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const today = getTodayString();
-                  if (val > today) {
-                    alert('Tanggal mulai tidak boleh melebihi tanggal hari ini!');
-                    setStartDate(today);
-                  } else {
-                    setStartDate(val);
-                  }
-                  setFilterPreset('all'); // Clear preset if manual date selected
-                }}
-                className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-900 dark:text-zinc-100 text-xs font-semibold focus:outline-none focus:border-amber-500 transition"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label htmlFor="end-date-picker" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Tanggal Selesai</label>
-              <input
-                id="end-date-picker"
-                type="date"
-                value={endDate}
-                max={getTodayString()}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const today = getTodayString();
-                  if (val > today) {
-                    alert('Tanggal selesai tidak boleh melebihi tanggal hari ini!');
-                    setEndDate(today);
-                  } else {
-                    setEndDate(val);
-                  }
-                  setFilterPreset('all');
-                }}
-                className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-900 dark:text-zinc-100 text-xs font-semibold focus:outline-none focus:border-amber-500 transition"
-              />
-            </div>
-          </div>
+              {/* Custom Date Range */}
+              <div className="md:col-span-5 grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label htmlFor="start-date-picker" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Tanggal Mulai</label>
+                  <input
+                    id="start-date-picker"
+                    type="date"
+                    value={startDate}
+                    max={getTodayString()}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const today = getTodayString();
+                      if (val > today) {
+                        alert('Tanggal mulai tidak boleh melebihi tanggal hari ini!');
+                        setStartDate(today);
+                      } else {
+                        setStartDate(val);
+                      }
+                      setFilterPreset('all'); // Clear preset if manual date selected
+                    }}
+                    className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-900 dark:text-zinc-100 text-xs font-semibold focus:outline-none focus:border-amber-500 transition"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="end-date-picker" className="text-[10px] font-bold text-zinc-400 uppercase tracking-wide">Tanggal Selesai</label>
+                  <input
+                    id="end-date-picker"
+                    type="date"
+                    value={endDate}
+                    max={getTodayString()}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const today = getTodayString();
+                      if (val > today) {
+                        alert('Tanggal selesai tidak boleh melebihi tanggal hari ini!');
+                        setEndDate(today);
+                      } else {
+                        setEndDate(val);
+                      }
+                      setFilterPreset('all');
+                    }}
+                    className="w-full px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-900 dark:text-zinc-100 text-xs font-semibold focus:outline-none focus:border-amber-500 transition"
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Search keyword */}
           <div className="md:col-span-3 space-y-1.5">

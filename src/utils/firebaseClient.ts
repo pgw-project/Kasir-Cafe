@@ -480,13 +480,41 @@ export const clientFirebaseRouter = {
       if (migrated) {
         ldb.set('menus', cleanMenus);
       }
-      return { ok: true, status: 200, data: cleanMenus };
+
+      // Determine active cafe ID using query param userId
+      const urlObj = new URL(path, window.location.origin);
+      const userIdParam = urlObj.searchParams.get('userId');
+      
+      const users = ldb.get('users') || [];
+      let targetCafeId = ldb.get('settings')?.activeCafeId || 'cafe-maissy-coffee';
+      if (userIdParam) {
+        const currentUser = users.find((u: any) => u.ID_User === userIdParam);
+        if (currentUser && currentUser.Role !== 'creator') {
+          targetCafeId = currentUser.cafeId || 'cafe-maissy-coffee';
+        }
+      }
+
+      const filteredMenus = cleanMenus.filter((m: any) => {
+        const menuCafeId = m.cafeId || 'cafe-maissy-coffee';
+        return menuCafeId === targetCafeId;
+      });
+
+      return { ok: true, status: 200, data: filteredMenus };
     }
     if (cleanPath === '/menus' && method === 'POST') {
       const ldb = getLocalDb();
       const menus = ldb.get('menus') || [];
-      const { nama, kategori, harga, status, fotoBase64, fotoUrl } = body;
+      const { nama, kategori, harga, status, fotoBase64, fotoUrl, actorId } = body;
       
+      let targetCafeId = ldb.get('settings')?.activeCafeId || 'cafe-maissy-coffee';
+      if (actorId) {
+        const users = ldb.get('users') || [];
+        const currentUser = users.find((u: any) => u.ID_User === actorId);
+        if (currentUser && currentUser.Role !== 'creator') {
+          targetCafeId = currentUser.cafeId || 'cafe-maissy-coffee';
+        }
+      }
+
       let finalFotoUrl = fotoUrl || 'https://images.unsplash.com/photo-1541167760496-1628856ab772?auto=format&fit=crop&q=80&w=200';
       if (fotoBase64) {
         finalFotoUrl = fotoBase64;
@@ -512,7 +540,8 @@ export const clientFirebaseRouter = {
         Harga: isNaN(Number(harga)) ? 0 : Number(harga),
         Foto_URL: finalFotoUrl,
         Status: status || 'Tersedia',
-        Created_At: new Date().toISOString()
+        Created_At: new Date().toISOString(),
+        cafeId: targetCafeId
       };
 
       menus.push(newMenu);
@@ -607,8 +636,9 @@ export const clientFirebaseRouter = {
         if (userId) {
           const users = ldb.get('users') || [];
           const user = users.find((u: any) => u.ID_User === userId);
-          if (user && user.Role !== 'creator' && user.cafeId) {
-            const userCafe = settings.cafes?.find((c: any) => c.id === user.cafeId);
+          if (user && user.Role !== 'creator') {
+            const userCafeId = user.cafeId || 'cafe-maissy-coffee';
+            const userCafe = settings.cafes?.find((c: any) => c.id === userCafeId);
             if (userCafe) {
               settingsResponse = {
                 ...settingsResponse,
@@ -636,11 +666,12 @@ export const clientFirebaseRouter = {
 
       const actor = users.find((u: any) => u.ID_User === actorId);
 
-      if (actor && actor.Role !== 'creator' && actor.cafeId) {
+      if (actor && actor.Role !== 'creator') {
+        const actorCafeId = actor.cafeId || 'cafe-maissy-coffee';
         if (!settings.cafes) {
           settings.cafes = [];
         }
-        const cafeIndex = settings.cafes.findIndex((c: any) => c.id === actor.cafeId);
+        const cafeIndex = settings.cafes.findIndex((c: any) => c.id === actorCafeId);
         if (cafeIndex !== -1) {
           settings.cafes[cafeIndex] = {
             ...settings.cafes[cafeIndex],
@@ -652,7 +683,7 @@ export const clientFirebaseRouter = {
           };
 
           // If this is the active cafe, ALSO update the top-level settings so they are in sync!
-          if (settings.activeCafeId === actor.cafeId) {
+          if (settings.activeCafeId === actorCafeId) {
             settings.namaToko = settings.cafes[cafeIndex].namaToko;
             settings.alamat = settings.cafes[cafeIndex].alamat;
             settings.telepon = settings.cafes[cafeIndex].telepon;
@@ -954,8 +985,8 @@ export const clientFirebaseRouter = {
       let targetCafeId = ldb.get('settings')?.activeCafeId || 'cafe-maissy-coffee';
       if (userIdParam) {
         const currentUser = users.find((u: any) => u.ID_User === userIdParam);
-        if (currentUser && currentUser.Role !== 'creator' && currentUser.cafeId) {
-          targetCafeId = currentUser.cafeId;
+        if (currentUser && currentUser.Role !== 'creator') {
+          targetCafeId = currentUser.cafeId || 'cafe-maissy-coffee';
         }
       }
       
@@ -1016,7 +1047,7 @@ export const clientFirebaseRouter = {
         });
 
         const users = ldb.get('users') || [];
-        const actor = users.find((u: any) => u.ID_User === actorId) || { Nama: cashierName || 'Kasir' };
+        const actor = users.find((u: any) => u.ID_User === actorId) || { Nama: cashierName || 'Kasir', Role: 'kasir' };
 
         finalTx = {
           ID_Transaksi: txId,
@@ -1030,7 +1061,7 @@ export const clientFirebaseRouter = {
           PDF_URL: `/api/receipt/${txId}/print`,
           Status: 'Paid',
           Metode_Bayar: metodeBayar || 'TUNAI',
-          cafeId: (actor as any).cafeId || ldb.get('settings')?.activeCafeId || 'cafe-maissy-coffee',
+          cafeId: (actor as any).Role !== 'creator' ? ((actor as any).cafeId || 'cafe-maissy-coffee') : (ldb.get('settings')?.activeCafeId || 'cafe-maissy-coffee'),
         };
 
         // Add log
@@ -1084,8 +1115,8 @@ export const clientFirebaseRouter = {
       let targetCafeId = ldb.get('settings')?.activeCafeId || 'cafe-maissy-coffee';
       if (userIdParam) {
         const currentUser = users.find((u: any) => u.ID_User === userIdParam);
-        if (currentUser && currentUser.Role !== 'creator' && currentUser.cafeId) {
-          targetCafeId = currentUser.cafeId;
+        if (currentUser && currentUser.Role !== 'creator') {
+          targetCafeId = currentUser.cafeId || 'cafe-maissy-coffee';
         }
       }
 

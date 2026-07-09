@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, CheckCircle, Printer, X, QrCode, Banknote, FileText, Bluetooth, Wifi } from 'lucide-react';
+import { Search, ShoppingCart, Trash2, Plus, Minus, CreditCard, CheckCircle, Printer, X, QrCode, Banknote, FileText, Bluetooth, Wifi, Usb } from 'lucide-react';
 import { Menu } from '../types.js';
 import { getReceiptUrl } from '../utils/firebaseClient.js';
 import { 
@@ -14,6 +14,13 @@ import {
   isBluetoothSupported, 
   printBluetoothReceipt 
 } from '../utils/bluetoothPrinter.js';
+import {
+  connectUsbPrinter,
+  disconnectUsbPrinter,
+  getConnectedUsbPrinter,
+  isUsbSupported,
+  printUsbReceipt
+} from '../utils/usbPrinter.js';
 
 interface POSViewProps {
   currentUser: any;
@@ -55,8 +62,14 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
   const [btStatus, setBtStatus] = useState<{ connected: boolean; name?: string }>({ connected: false });
   const [btLoading, setBtLoading] = useState(false);
 
+  // USB Printer states
+  const [usbStatus, setUsbStatus] = useState<{ connected: boolean; name?: string }>({ connected: false });
+  const [usbLoading, setUsbLoading] = useState(false);
+  const [settings, setSettings] = useState<any>(null);
+
   useEffect(() => {
     setBtStatus(getConnectedPrinter());
+    setUsbStatus(getConnectedUsbPrinter());
   }, []);
 
   const handleConnectBluetooth = async () => {
@@ -111,11 +124,73 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
     }
   };
 
+  const handleConnectUsb = async () => {
+    setUsbLoading(true);
+    try {
+      const status = await connectUsbPrinter();
+      setUsbStatus(status);
+      if (status.connected) {
+        alert(`Berhasil terhubung ke printer USB: ${status.deviceName}`);
+      } else if (status.error) {
+        alert(status.error);
+      }
+    } catch (err: any) {
+      alert('Gagal menyambung ke USB: ' + err.message);
+    } finally {
+      setUsbLoading(false);
+    }
+  };
+
+  const handleDisconnectUsb = async () => {
+    await disconnectUsbPrinter();
+    setUsbStatus({ connected: false });
+  };
+
+  const handlePrintUsb = async (paperSize: '58' | '80') => {
+    try {
+      const [txDetailsRes, settingsRes] = await Promise.all([
+        fetch(`/api/transactions?userId=${currentUser?.ID_User || ''}`),
+        fetch(`/api/settings?userId=${currentUser.ID_User}`)
+      ]);
+      const txData = await txDetailsRes.json();
+      const settings = await settingsRes.json();
+      
+      const tx = txData.transactions.find((t: any) => t.ID_Transaksi === printTxId);
+      const details = txData.details.filter((d: any) => d.ID_Transaksi === printTxId);
+      
+      if (!tx) {
+        alert('Transaksi tidak ditemukan.');
+        return;
+      }
+      
+      const result = await printUsbReceipt(tx, details, settings, paperSize);
+      if (result.success) {
+        alert('Struk berhasil dikirim ke printer USB!');
+        setIsPrintOptionOpen(false);
+        setPrintTxId('');
+      } else {
+        alert(result.error || 'Gagal memprint.');
+      }
+    } catch (err: any) {
+      alert('Kesalahan saat mencetak USB: ' + err.message);
+    }
+  };
+
+  const fetchPOSSettings = async () => {
+    try {
+      const res = await fetch(`/api/settings?userId=${currentUser?.ID_User || ''}`);
+      const data = await res.json();
+      setSettings(data);
+    } catch (err) {
+      console.error('Error fetching settings for POS:', err);
+    }
+  };
+
   // Load Menus
   const fetchMenus = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/menus');
+      const res = await fetch(`/api/menus?userId=${currentUser?.ID_User || ''}`);
       const data = await res.json();
       setMenus(data.filter((m: Menu) => m.Status === 'Tersedia'));
     } catch (err) {
@@ -127,9 +202,11 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
 
   useEffect(() => {
     fetchMenus();
+    fetchPOSSettings();
 
     const handleUpdate = () => {
       fetchMenus();
+      fetchPOSSettings();
     };
     window.addEventListener('ws_db_update', handleUpdate);
     return () => {
@@ -675,25 +752,62 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
               ) : (
                 <div id="qris-payment-panel" className="p-4 rounded-2xl bg-zinc-50 dark:bg-[#25201c] border border-zinc-200 dark:border-zinc-800/60 flex flex-col items-center justify-center text-center space-y-3">
                   <div className="flex items-center justify-between w-full">
-                    <span className="text-[10px] font-bold text-zinc-400 tracking-wider uppercase">QRIS DYNAMIC</span>
+                    <span className="text-[10px] font-bold text-zinc-400 tracking-wider uppercase">
+                      {settings?.qrisImageUrl || settings?.qrisPayload ? 'QRIS OWNER (LISENSI LEGAL)' : 'QRIS DYNAMIC (DEMO)'}
+                    </span>
                     <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-rose-500 text-white leading-none uppercase">GPN</span>
                   </div>
                   
-                  {/* Stylized QRIS QR code mock container */}
+                  {/* Stylized QRIS QR code container */}
                   <div className="p-4 rounded-2xl bg-white border border-zinc-200 shadow-sm flex flex-col items-center justify-center">
-                    <div className="relative h-36 w-36 bg-zinc-50 rounded-lg flex items-center justify-center border border-zinc-100">
-                      <QrCode className="h-28 w-28 text-zinc-900" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="h-8 w-8 rounded-md bg-white border border-zinc-200 shadow-sm flex items-center justify-center">
-                          <span className="text-[9px] font-black text-rose-600">QRIS</span>
-                        </div>
-                      </div>
+                    <div className="relative h-40 w-40 bg-zinc-50 rounded-lg flex items-center justify-center border border-zinc-100 overflow-hidden">
+                      {settings?.qrisImageUrl ? (
+                        <img 
+                          src={settings.qrisImageUrl} 
+                          alt="QRIS Owner" 
+                          className="h-full w-full object-contain p-2 bg-white"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : settings?.qrisPayload ? (
+                        <img 
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(settings.qrisPayload)}`} 
+                          alt="QRIS Payload Code" 
+                          className="h-36 w-36 object-contain p-1"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <>
+                          <QrCode className="h-28 w-28 text-zinc-900 animate-pulse" />
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-8 w-8 rounded-md bg-white border border-zinc-200 shadow-sm flex items-center justify-center">
+                              <span className="text-[9px] font-black text-rose-600">QRIS</span>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mt-2 font-mono">NMID: ID1029384756</span>
+                    {settings?.qrisPayload ? (
+                      <span className="text-[7px] font-mono text-zinc-400 max-w-[150px] truncate mt-1.5 block" title={settings.qrisPayload}>
+                        Payload: {settings.qrisPayload}
+                      </span>
+                    ) : (
+                      <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mt-2 font-mono">
+                        {settings?.qrisImageUrl ? 'QRIS OWNER AKTIF' : 'NMID: ID1029384756'}
+                      </span>
+                    )}
                   </div>
 
                   <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed font-semibold">
-                    Tunjukkan QR Code ini kepada pelanggan.<br />Setelah discan dan sukses membayar <strong className="text-amber-600 dark:text-amber-500 font-mono">Rp {(totalHarga || 0).toLocaleString('id-ID')}</strong>, klik konfirmasi di bawah.
+                    {settings?.qrisImageUrl || settings?.qrisPayload ? (
+                      <>
+                        Tunjukkan QRIS Owner ini kepada pelanggan.<br />Setelah pembayaran <strong className="text-amber-600 dark:text-amber-500 font-mono">Rp {(totalHarga || 0).toLocaleString('id-ID')}</strong> berhasil diverifikasi, klik konfirmasi di bawah.
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-rose-500 font-bold block mb-1">Peringatan: QRIS Owner belum diatur di Pengaturan!</span>
+                        Silakan upload foto QRIS berlisensi Anda di menu Pengaturan. Klik konfirmasi pembayaran QRIS di bawah untuk simulasi.
+                      </>
+                    )}
                   </p>
                 </div>
               )}
@@ -873,6 +987,79 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
                   )}
                   <p className="text-[9px] text-zinc-400 dark:text-zinc-500 leading-tight">
                     *Akses Bluetooth mungkin diblokir di dalam iframe pratinjau. Jika tombol tidak merespons, buka aplikasi di Tab Baru.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* --- USB PRINTER INTEGRATION SECTION --- */}
+            <div className="mt-4 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-emerald-500/5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-500 flex items-center gap-1">
+                  <Usb className="h-3.5 w-3.5" /> Koneksi Printer USB
+                </span>
+                {usbStatus.connected ? (
+                  <span className="inline-flex items-center gap-1 text-[9px] bg-emerald-500/15 text-emerald-600 dark:text-emerald-500 px-2 py-0.5 rounded-full font-bold">
+                    Connected
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full font-bold">
+                    Offline
+                  </span>
+                )}
+              </div>
+
+              {!isUsbSupported() ? (
+                <p className="text-[10px] text-zinc-500 dark:text-zinc-400 italic">
+                  Web USB tidak didukung browser ini. Gunakan Google Chrome atau Edge versi terbaru.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {usbStatus.connected ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between bg-white dark:bg-[#15110e] border border-zinc-100 dark:border-zinc-850 p-2 rounded-lg text-xs">
+                        <span className="font-bold text-zinc-800 dark:text-zinc-200 truncate max-w-[150px]">
+                          {usbStatus.name || 'Printer USB'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleDisconnectUsb}
+                          className="text-[10px] font-bold text-rose-600 dark:text-rose-500 hover:underline cursor-pointer"
+                        >
+                          Putuskan
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mt-1">
+                        <button
+                          type="button"
+                          onClick={() => handlePrintUsb('58')}
+                          className="py-2 px-3 rounded-xl bg-amber-600 text-white font-bold text-[11px] hover:bg-amber-700 transition cursor-pointer text-center"
+                        >
+                          Cetak USB 58mm
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handlePrintUsb('80')}
+                          className="py-2 px-3 rounded-xl bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 transition cursor-pointer text-center"
+                        >
+                          Cetak USB 80mm
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={usbLoading}
+                      onClick={handleConnectUsb}
+                      className="w-full py-2 px-3.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <Usb className="h-4 w-4" />
+                      {usbLoading ? 'Menyambungkan...' : 'Sambungkan Printer USB'}
+                    </button>
+                  )}
+                  <p className="text-[9px] text-zinc-400 dark:text-zinc-500 leading-tight font-semibold">
+                    *Akses USB langsung dari browser Chrome/Edge tanpa driver tambahan, sehingga proses cetak instan.
                   </p>
                 </div>
               )}
