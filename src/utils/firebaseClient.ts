@@ -1290,6 +1290,9 @@ export function generateReceiptHtml(tx: Transaction, details: TransactionDetail[
         alamat: txCafe.alamat,
         telepon: txCafe.telepon,
         pesanFooter: txCafe.pesanFooter,
+        logoUrl: txCafe.logoUrl,
+        qrisPayload: txCafe.qrisPayload,
+        qrisImageUrl: txCafe.qrisImageUrl,
       };
     }
   }
@@ -1359,6 +1362,7 @@ export function generateReceiptHtml(tx: Transaction, details: TransactionDetail[
         <button class="no-print-btn" onclick="window.print()">Cetak Struk (PDF)</button>
       </div>
       <div class="header text-center">
+        ${activeSettings.logoUrl ? `<img src="${activeSettings.logoUrl}" style="max-height: 50px; max-width: 100px; object-fit: contain; margin: 0 auto 6px auto; display: block;" alt="Logo" />` : ''}
         <p class="title">${activeSettings.namaToko || 'Maissy Coffee'}</p>
         <p style="margin: 3px 0;">${activeSettings.alamat || ''}</p>
         <p style="margin: 3px 0;">Telp: ${activeSettings.telepon || ''}</p>

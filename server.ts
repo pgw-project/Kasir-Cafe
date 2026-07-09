@@ -987,8 +987,22 @@ async function startServer() {
       if (!db.settings.cafes) {
         db.settings.cafes = [];
       }
-      const cafeIndex = db.settings.cafes.findIndex((c: any) => c.id === actorCafeId);
-      if (cafeIndex !== -1) {
+      let cafeIndex = db.settings.cafes.findIndex((c: any) => c.id === actorCafeId);
+      if (cafeIndex === -1) {
+        // Self-healing: Create the cafe if it doesn't exist yet!
+        const newCafe = {
+          id: actorCafeId,
+          namaToko: namaToko || 'Maissy Coffee',
+          alamat: alamat || '',
+          telepon: telepon || '',
+          pesanFooter: pesanFooter || '',
+          logoUrl: finalLogoUrl || '',
+          qrisPayload: qrisPayload || '',
+          qrisImageUrl: qrisImageUrl || '',
+        };
+        db.settings.cafes.push(newCafe);
+        cafeIndex = db.settings.cafes.length - 1;
+      } else {
         db.settings.cafes[cafeIndex] = {
           ...db.settings.cafes[cafeIndex],
           namaToko: namaToko || db.settings.cafes[cafeIndex].namaToko,
@@ -999,17 +1013,17 @@ async function startServer() {
           qrisPayload: qrisPayload !== undefined ? qrisPayload : db.settings.cafes[cafeIndex].qrisPayload,
           qrisImageUrl: qrisImageUrl !== undefined ? qrisImageUrl : db.settings.cafes[cafeIndex].qrisImageUrl,
         };
+      }
 
-        // If this is the active cafe, ALSO update the top-level settings so they are in sync!
-        if (db.settings.activeCafeId === actorCafeId) {
-          db.settings.namaToko = db.settings.cafes[cafeIndex].namaToko;
-          db.settings.alamat = db.settings.cafes[cafeIndex].alamat;
-          db.settings.telepon = db.settings.cafes[cafeIndex].telepon;
-          db.settings.pesanFooter = db.settings.cafes[cafeIndex].pesanFooter;
-          db.settings.logoUrl = db.settings.cafes[cafeIndex].logoUrl;
-          db.settings.qrisPayload = db.settings.cafes[cafeIndex].qrisPayload;
-          db.settings.qrisImageUrl = db.settings.cafes[cafeIndex].qrisImageUrl;
-        }
+      // If this is the active cafe, ALSO update the top-level settings so they are in sync!
+      if (db.settings.activeCafeId === actorCafeId) {
+        db.settings.namaToko = db.settings.cafes[cafeIndex].namaToko;
+        db.settings.alamat = db.settings.cafes[cafeIndex].alamat;
+        db.settings.telepon = db.settings.cafes[cafeIndex].telepon;
+        db.settings.pesanFooter = db.settings.cafes[cafeIndex].pesanFooter;
+        db.settings.logoUrl = db.settings.cafes[cafeIndex].logoUrl;
+        db.settings.qrisPayload = db.settings.cafes[cafeIndex].qrisPayload;
+        db.settings.qrisImageUrl = db.settings.cafes[cafeIndex].qrisImageUrl;
       }
     } else {
       db.settings = {
@@ -1405,20 +1419,19 @@ async function startServer() {
     const details = db.transaction_details.filter((d: TransactionDetail) => d.ID_Transaksi === id);
     
     let settings = { ...db.settings };
-    if (tx.cafeId) {
-      const txCafe = db.settings.cafes?.find((c: any) => c.id === tx.cafeId);
-      if (txCafe) {
-        settings = {
-          ...settings,
-          namaToko: txCafe.namaToko,
-          alamat: txCafe.alamat,
-          telepon: txCafe.telepon,
-          pesanFooter: txCafe.pesanFooter,
-          logoUrl: txCafe.logoUrl,
-          qrisPayload: txCafe.qrisPayload,
-          qrisImageUrl: txCafe.qrisImageUrl,
-        };
-      }
+    const txCafeId = tx.cafeId || 'cafe-maissy-coffee';
+    const txCafe = db.settings.cafes?.find((c: any) => c.id === txCafeId);
+    if (txCafe) {
+      settings = {
+        ...settings,
+        namaToko: txCafe.namaToko,
+        alamat: txCafe.alamat,
+        telepon: txCafe.telepon,
+        pesanFooter: txCafe.pesanFooter,
+        logoUrl: txCafe.logoUrl,
+        qrisPayload: txCafe.qrisPayload,
+        qrisImageUrl: txCafe.qrisImageUrl,
+      };
     }
 
     const paperSize = req.query.paperSize || '80';
@@ -1546,6 +1559,7 @@ async function startServer() {
           <button class="no-print-btn" onclick="window.print()">Cetak Struk (PDF)</button>
         </div>
         <div class="header text-center">
+          ${settings.logoUrl ? `<img src="${settings.logoUrl}" style="max-height: 50px; max-width: 100px; object-fit: contain; margin: 0 auto 6px auto; display: block;" alt="Logo" />` : ''}
           <p class="title">${settings.namaToko}</p>
           <p style="margin: 3px 0;">${settings.alamat}</p>
           <p style="margin: 3px 0;">Telp: ${settings.telepon}</p>
