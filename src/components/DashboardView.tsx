@@ -228,7 +228,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
                 : (currentUser?.Nama || 'Kasir')}
             </h3>
             <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-2">
-              {currentUser?.Role === 'admin' ? 'Omzet kumulatif di database' : 'Hak Akses: KASIR MAISSY'}
+              {currentUser?.Role === 'admin' ? 'Omzet kumulatif di database' : `Hak Akses: KASIR ${cafeName.toUpperCase()}`}
             </p>
           </div>
         </motion.div>
