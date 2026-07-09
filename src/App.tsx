@@ -919,7 +919,7 @@ export default function App() {
               initial={{ opacity: 0, y: 50, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 50, scale: 0.95 }}
-              className="w-80 h-96 bg-white dark:bg-[#110e0c] border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden mb-3"
+              className="w-80 h-96 glass-panel border border-zinc-200/80 dark:border-zinc-800/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden mb-3 glow-amber-sm"
             >
               {/* Chat Header */}
               <div className="px-4 py-3 bg-amber-600 text-white flex justify-between items-center shrink-0">

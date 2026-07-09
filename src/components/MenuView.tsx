@@ -72,6 +72,8 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
   // Image URL State
   const [fotoPreview, setFotoPreview] = useState<string>('');
   const [fotoUrl, setFotoUrl] = useState<string>('');
+  const [originalSize, setOriginalSize] = useState<string>('');
+  const [compressedSize, setCompressedSize] = useState<string>('');
 
   // Delete Confirmation Dialog State
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -113,6 +115,8 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
     setStatus('Tersedia');
     setFotoPreview('');
     setFotoUrl('');
+    setOriginalSize('');
+    setCompressedSize('');
     setIsFormOpen(true);
   };
 
@@ -125,6 +129,8 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
     setStatus(menu.Status);
     setFotoPreview(menu.Foto_URL);
     setFotoUrl(menu.Foto_URL);
+    setOriginalSize('');
+    setCompressedSize('');
     setIsFormOpen(true);
   };
 
@@ -518,13 +524,17 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                           onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              if (file.size > 2 * 1024 * 1024) {
-                                alert("Ukuran gambar tidak boleh lebih dari 2MB!");
+                              if (file.size > 10 * 1024 * 1024) {
+                                alert("Ukuran gambar tidak boleh lebih dari 10MB!");
                                 return;
                               }
+                              const origSizeKB = (file.size / 1024).toFixed(1);
+                              setOriginalSize(`${origSizeKB} KB`);
                               resizeAndCompressImage(file, 400, 400, (compressedBase64) => {
                                 setFotoUrl(compressedBase64);
                                 setFotoPreview(compressedBase64);
+                                const compSizeKB = (compressedBase64.length * 0.75 / 1024).toFixed(1);
+                                setCompressedSize(`${compSizeKB} KB`);
                               });
                             }
                           }}
@@ -559,11 +569,21 @@ export default function MenuView({ currentUser, onAddLog }: MenuViewProps) {
                           }}
                         />
                       </div>
+
+                      {originalSize && compressedSize && (
+                        <div className="mt-2 flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-500 px-2.5 py-1 rounded-lg text-[9px] font-bold">
+                          <Check className="h-3 w-3 shrink-0 text-emerald-500" />
+                          <span>Kompresi Berhasil: {originalSize} → {compressedSize}</span>
+                        </div>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => {
                           setFotoUrl('');
                           setFotoPreview('');
+                          setOriginalSize('');
+                          setCompressedSize('');
                         }}
                         className="absolute top-2 right-2 p-1 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-700 transition"
                         title="Hapus gambar"

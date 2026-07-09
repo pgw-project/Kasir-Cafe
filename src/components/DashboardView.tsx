@@ -135,7 +135,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
-          className="p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#1a1613] relative overflow-hidden shadow-sm"
+          className="p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#1a1613] relative overflow-hidden shadow-sm card-interactive"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 tracking-wider uppercase">Pendapatan Hari Ini</span>
@@ -163,7 +163,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.05 }}
-          className="p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#1a1613] relative overflow-hidden shadow-sm"
+          className="p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#1a1613] relative overflow-hidden shadow-sm card-interactive"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 tracking-wider uppercase">Pesanan Hari Ini</span>
@@ -187,7 +187,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#1a1613] relative overflow-hidden shadow-sm"
+          className="p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#1a1613] relative overflow-hidden shadow-sm card-interactive"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 tracking-wider uppercase">Terlaris Hari Ini</span>
@@ -211,7 +211,7 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.15 }}
-          className="p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#1a1613] relative overflow-hidden shadow-sm"
+          className="p-6 rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white dark:bg-[#1a1613] relative overflow-hidden shadow-sm card-interactive"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-zinc-400 dark:text-zinc-500 tracking-wider uppercase">

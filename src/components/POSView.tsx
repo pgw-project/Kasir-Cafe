@@ -348,7 +348,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
                 key={menu.ID_Menu}
                 id={`pos-item-${menu.ID_Menu}`}
                 onClick={() => addToCart(menu)}
-                className="group p-3 rounded-2xl bg-white dark:bg-[#1a1613] border border-zinc-200/80 dark:border-zinc-800/80 hover:border-amber-500/50 hover:shadow-lg hover:shadow-amber-500/5 cursor-pointer transition-all duration-300 flex flex-col justify-between"
+                className="group p-3 rounded-2xl bg-white dark:bg-[#1a1613] border border-zinc-200/80 dark:border-zinc-800/80 cursor-pointer flex flex-col justify-between card-interactive"
               >
                 <div>
                   {/* Photo with category badge */}
@@ -534,25 +534,27 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
 
   {/* --- CHECKOUT PAYMENTS MODAL --- */}
       {isCheckoutOpen && (
-        <div id="checkout-modal" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-md bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 relative overflow-hidden">
+        <div id="checkout-modal" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="w-full max-w-md bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden">
             <button
               id="close-checkout-modal"
               onClick={() => setIsCheckoutOpen(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-500 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-500 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer z-10"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-lg flex items-center gap-2">
-              <CreditCard className="h-5.5 w-5.5 text-amber-500" />
-              Proses Pembayaran Kasir
-            </h3>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-              Penerimaan pembayaran dari Pelanggan: <strong className="text-zinc-800 dark:text-zinc-200">{namaPelanggan}</strong>
-            </p>
+            <div className="p-6 pb-2">
+              <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-lg flex items-center gap-2">
+                <CreditCard className="h-5.5 w-5.5 text-amber-500" />
+                Proses Pembayaran Kasir
+              </h3>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                Penerimaan pembayaran dari Pelanggan: <strong className="text-zinc-800 dark:text-zinc-200">{namaPelanggan}</strong>
+              </p>
+            </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-4">
               {/* Grand Total Show */}
               <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-center">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Harus Dibayar</span>
@@ -702,8 +704,10 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
                   {errorCheckout}
                 </p>
               )}
+            </div>
 
-              {/* Submit Pay */}
+            {/* Submit Pay Footer */}
+            <div className="p-4 sm:p-5 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-[#201c18]/50 flex justify-end rounded-b-2xl">
               <button
                 id="submit-payment-btn"
                 onClick={handleCheckoutSubmit}
@@ -711,7 +715,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
                 className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 cursor-pointer transition-all duration-300
                   ${metodeBayar === 'QRIS' || (uangBayar !== '' && Number(uangBayar) >= totalHarga)
                     ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-600/10 active:scale-98'
-                    : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 dark:text-zinc-600 cursor-not-allowed'}`}
+                    : 'bg-zinc-100 dark:bg-zinc-850 text-zinc-400 dark:text-zinc-650 cursor-not-allowed'}`}
               >
                 {metodeBayar === 'QRIS' ? 'Konfirmasi Pembayaran QRIS' : 'Selesaikan Transaksi (Cetak Struk)'}
               </button>
@@ -722,20 +726,22 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
 
       {/* --- SUCCESS RECEIPT PRINT POPUP MODAL --- */}
       {isSuccessOpen && latestTx && (
-        <div id="success-tx-modal" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-lg bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 relative">
-            <div className="flex flex-col items-center text-center">
-              <div className="h-12 w-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-                <CheckCircle className="h-8 w-8" />
+        <div id="success-tx-modal" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="w-full max-w-lg bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden">
+            <div className="p-6 pb-2 shrink-0">
+              <div className="flex flex-col items-center text-center">
+                <div className="h-12 w-12 rounded-full bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                  <CheckCircle className="h-8 w-8" />
+                </div>
+                <h3 className="font-extrabold text-zinc-950 dark:text-zinc-50 text-xl mt-3">Transaksi Sukses!</h3>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                  ID Transaksi: <strong className="font-mono text-amber-600">{latestTx.ID_Transaksi}</strong> | Pelanggan: <strong>{latestTx.Nama_Pelanggan}</strong>
+                </p>
               </div>
-              <h3 className="font-extrabold text-zinc-950 dark:text-zinc-50 text-xl mt-3">Transaksi Sukses!</h3>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                ID Transaksi: <strong className="font-mono text-amber-600">{latestTx.ID_Transaksi}</strong> | Pelanggan: <strong>{latestTx.Nama_Pelanggan}</strong>
-              </p>
             </div>
 
             {/* Quick print receipt options */}
-            <div className="mt-5 space-y-4">
+            <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-4">
               {/* Receipt print iframe emulation for instant preview inside POS layout */}
               <div className="p-4 rounded-xl border border-zinc-100 dark:border-zinc-800/80 bg-zinc-50 dark:bg-[#25201c]/40">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 block mb-2">Pratinjau Struk Belanja</span>

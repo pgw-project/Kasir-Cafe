@@ -489,131 +489,135 @@ export default function UserView({ currentUser }: UserViewProps) {
             </tbody>
           </table>
         </div>
-      )}
-
-      {/* --- ADD USER FORM DIALOG --- */}
+      )}      {/* --- ADD USER FORM DIALOG --- */}
       {isFormOpen && (
-        <div id="user-form-dialog" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-md bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 relative">
+        <div id="user-form-dialog" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="w-full max-w-md bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden">
             <button
               id="close-user-dialog"
               onClick={() => setIsFormOpen(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-500 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-500 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer z-10"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-lg flex items-center gap-2">
-              <UserPlus className="h-5.5 w-5.5 text-amber-500" />
-              Daftarkan Akun Kasir Baru
-            </h3>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-              Tambahkan data staf pelaksana kasir atau manajemen untuk mengoperasikan sistem POS Maissy Coffee.
-            </p>
+            <div className="p-6 pb-2">
+              <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-lg flex items-center gap-2">
+                <UserPlus className="h-5.5 w-5.5 text-amber-500" />
+                Daftarkan Akun Kasir Baru
+              </h3>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                Tambahkan data staf pelaksana kasir atau manajemen untuk mengoperasikan sistem POS Maissy Coffee.
+              </p>
+            </div>
 
-            <form onSubmit={handleCreateUser} className="mt-5 space-y-4">
-              {/* Nama Lengkap */}
-              <div className="space-y-1.5">
-                <label htmlFor="user-fullname-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                  <User className="h-3.5 w-3.5" /> Nama Lengkap <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  id="user-fullname-field"
-                  type="text"
-                  placeholder="Masukkan nama lengkap staf..."
-                  value={nama}
-                  onChange={(e) => setNama(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
-                  required
-                />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-1.5">
-                <label htmlFor="user-email-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                  <Mail className="h-3.5 w-3.5" /> Alamat Email <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  id="user-email-field"
-                  type="email"
-                  placeholder="Contoh: kasir.rian@maissy.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
-                  required
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-1.5">
-                <label htmlFor="user-pwd-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                  Kata Sandi Baru <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  id="user-pwd-field"
-                  type="password"
-                  placeholder="Minimal 6 karakter..."
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
-                  required
-                />
-              </div>               {/* Peran / Hak Akses */}
-              <div className="space-y-1.5">
-                <label htmlFor="user-role-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                  Peran & Hak Akses <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  id="user-role-field"
-                  value={role}
-                  onChange={(e: any) => setRole(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
-                  disabled={currentUser.Role === 'admin'}
-                >
-                  <option value="kasir">User (Kasir)</option>
-                  {currentUser.Role === 'creator' && (
-                    <>
-                      <option value="admin">Admin (Owner/Manager)</option>
-                      <option value="creator">Pembuat Aplikasi (Creator)</option>
-                    </>
-                  )}
-                </select>
-              </div>
-
-              {/* Outlet Cafe / Warung */}
-              {role !== 'creator' && (
+            <form onSubmit={handleCreateUser} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-4">
+                {/* Nama Lengkap */}
                 <div className="space-y-1.5">
-                  <label htmlFor="user-cafe-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                    <Coffee className="h-3.5 w-3.5" /> Outlet Cafe / Warung <span className="text-rose-500">*</span>
+                  <label htmlFor="user-fullname-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                    <User className="h-3.5 w-3.5" /> Nama Lengkap <span className="text-rose-500">*</span>
                   </label>
-                  {currentUser.Role === 'admin' ? (
-                    <input
-                      type="text"
-                      value={cafes.find((c) => c.id === currentUser.cafeId)?.namaToko || 'Outlet Anda'}
-                      disabled
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-[#1a1613]/50 text-zinc-500 dark:text-zinc-400 text-xs font-bold cursor-not-allowed"
-                    />
-                  ) : (
-                    <select
-                      id="user-cafe-field"
-                      value={selectedCafeId}
-                      onChange={(e) => setSelectedCafeId(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
-                      required
-                    >
-                      {cafes.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.namaToko}
-                        </option>
-                      ))}
-                      {cafes.length === 0 && <option value="cafe-maissy-coffee">Default Cafe (Maissy Coffee)</option>}
-                    </select>
-                  )}
+                  <input
+                    id="user-fullname-field"
+                    type="text"
+                    placeholder="Masukkan nama lengkap staf..."
+                    value={nama}
+                    onChange={(e) => setNama(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
+                    required
+                  />
                 </div>
-              )}
+
+                {/* Email */}
+                <div className="space-y-1.5">
+                  <label htmlFor="user-email-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                    <Mail className="h-3.5 w-3.5" /> Alamat Email <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="user-email-field"
+                    type="email"
+                    placeholder="Contoh: kasir.rian@maissy.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
+                    required
+                  />
+                </div>
+
+                {/* Password */}
+                <div className="space-y-1.5">
+                  <label htmlFor="user-pwd-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                    Kata Sandi Baru <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="user-pwd-field"
+                    type="password"
+                    placeholder="Minimal 6 karakter..."
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
+                    required
+                  />
+                </div>
+
+                {/* Peran / Hak Akses */}
+                <div className="space-y-1.5">
+                  <label htmlFor="user-role-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                    Peran & Hak Akses <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    id="user-role-field"
+                    value={role}
+                    onChange={(e: any) => setRole(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
+                    disabled={currentUser.Role === 'admin'}
+                  >
+                    <option value="kasir">User (Kasir)</option>
+                    {currentUser.Role === 'creator' && (
+                      <>
+                        <option value="admin">Admin (Owner/Manager)</option>
+                        <option value="creator">Pembuat Aplikasi (Creator)</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                {/* Outlet Cafe / Warung */}
+                {role !== 'creator' && (
+                  <div className="space-y-1.5">
+                    <label htmlFor="user-cafe-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                      <Coffee className="h-3.5 w-3.5" /> Outlet Cafe / Warung <span className="text-rose-500">*</span>
+                    </label>
+                    {currentUser.Role === 'admin' ? (
+                      <input
+                        type="text"
+                        value={cafes.find((c) => c.id === currentUser.cafeId)?.namaToko || 'Outlet Anda'}
+                        disabled
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-[#1a1613]/50 text-zinc-500 dark:text-zinc-400 text-xs font-bold cursor-not-allowed"
+                      />
+                    ) : (
+                      <select
+                        id="user-cafe-field"
+                        value={selectedCafeId}
+                        onChange={(e) => setSelectedCafeId(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
+                        required
+                      >
+                        {cafes.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.namaToko}
+                          </option>
+                        ))}
+                        {cafes.length === 0 && <option value="cafe-maissy-coffee">Default Cafe (Maissy Coffee)</option>}
+                      </select>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Submit Action */}
-              <div className="pt-2 flex justify-end gap-3 font-semibold">
+              <div className="p-4 sm:p-5 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-[#201c18]/50 flex justify-end gap-3 rounded-b-2xl font-semibold">
                 <button
                   type="button"
                   id="cancel-user-form"
@@ -638,126 +642,132 @@ export default function UserView({ currentUser }: UserViewProps) {
 
       {/* --- EDIT USER FORM DIALOG --- */}
       {isEditOpen && (
-        <div id="edit-user-dialog" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="w-full max-w-md bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-6 relative">
+        <div id="edit-user-dialog" className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="w-full max-w-md bg-white dark:bg-[#1a1613] rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl flex flex-col max-h-[90vh] relative overflow-hidden">
             <button
               id="close-edit-user-dialog"
               onClick={() => setIsEditOpen(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-500 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer"
+              className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-500 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition cursor-pointer z-10"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-lg flex items-center gap-2">
-              <Edit className="h-5.5 w-5.5 text-amber-500" />
-              Ubah Data Akun Pengguna
-            </h3>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-              Ubah informasi profil atau ganti kata sandi akun pengguna terpilih.
-            </p>
+            <div className="p-6 pb-2">
+              <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-lg flex items-center gap-2">
+                <Edit className="h-5.5 w-5.5 text-amber-500" />
+                Ubah Data Akun Pengguna
+              </h3>
+              <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                Ubah informasi profil atau ganti kata sandi akun pengguna terpilih.
+              </p>
+            </div>
 
-            <form onSubmit={handleEditUser} className="mt-5 space-y-4">
-              {/* Nama Lengkap */}
-              <div className="space-y-1.5">
-                <label htmlFor="edit-user-fullname-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                  <User className="h-3.5 w-3.5" /> Nama Lengkap <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  id="edit-user-fullname-field"
-                  type="text"
-                  placeholder="Masukkan nama lengkap staf..."
-                  value={editNama}
-                  onChange={(e) => setEditNama(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
-                  required
-                />
-              </div>
-
-              {/* Email */}
-              <div className="space-y-1.5">
-                <label htmlFor="edit-user-email-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                  <Mail className="h-3.5 w-3.5" /> Alamat Email <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  id="edit-user-email-field"
-                  type="email"
-                  placeholder="Contoh: kasir.rian@maissy.com"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
-                  required
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-1.5">
-                <label htmlFor="edit-user-pwd-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                  Kata Sandi Baru <span className="text-zinc-400 font-normal">(Kosongkan jika tidak ingin mengubah)</span>
-                </label>
-                <input
-                  id="edit-user-pwd-field"
-                  type="password"
-                  placeholder="Minimal 6 karakter..."
-                  value={editPassword}
-                  onChange={(e) => setEditPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
-                />
-              </div>               {/* Peran / Hak Akses */}
-              <div className="space-y-1.5">
-                <label htmlFor="edit-user-role-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                  Peran & Hak Akses <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  id="edit-user-role-field"
-                  value={editRole}
-                  onChange={(e: any) => setEditRole(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
-                  disabled={currentUser.Role === 'admin'}
-                >
-                  <option value="kasir">User (Kasir)</option>
-                  {currentUser.Role === 'creator' && (
-                    <>
-                      <option value="admin">Admin (Owner/Manager)</option>
-                      <option value="creator">Pembuat Aplikasi (Creator)</option>
-                    </>
-                  )}
-                </select>
-              </div>
-
-              {/* Outlet Cafe / Warung */}
-              {editRole !== 'creator' && (
+            <form onSubmit={handleEditUser} className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-4">
+                {/* Nama Lengkap */}
                 <div className="space-y-1.5">
-                  <label htmlFor="edit-user-cafe-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                    <Coffee className="h-3.5 w-3.5" /> Outlet Cafe / Warung <span className="text-rose-500">*</span>
+                  <label htmlFor="edit-user-fullname-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                    <User className="h-3.5 w-3.5" /> Nama Lengkap <span className="text-rose-500">*</span>
                   </label>
-                  {currentUser.Role === 'admin' ? (
-                    <input
-                      type="text"
-                      value={cafes.find((c) => c.id === currentUser.cafeId)?.namaToko || 'Outlet Anda'}
-                      disabled
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-[#1a1613]/50 text-zinc-500 dark:text-zinc-400 text-xs font-bold cursor-not-allowed"
-                    />
-                  ) : (
-                    <select
-                      id="edit-user-cafe-field"
-                      value={editCafeId}
-                      onChange={(e) => setEditCafeId(e.target.value)}
-                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
-                      required
-                    >
-                      {cafes.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.namaToko}
-                        </option>
-                      ))}
-                      {cafes.length === 0 && <option value="cafe-maissy-coffee">Default Cafe (Maissy Coffee)</option>}
-                    </select>
-                  )}
+                  <input
+                    id="edit-user-fullname-field"
+                    type="text"
+                    placeholder="Masukkan nama lengkap staf..."
+                    value={editNama}
+                    onChange={(e) => setEditNama(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
+                    required
+                  />
                 </div>
-              )}
+
+                {/* Email */}
+                <div className="space-y-1.5">
+                  <label htmlFor="edit-user-email-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                    <Mail className="h-3.5 w-3.5" /> Alamat Email <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    id="edit-user-email-field"
+                    type="email"
+                    placeholder="Contoh: kasir.rian@maissy.com"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
+                    required
+                  />
+                </div>
+
+                {/* Password */}
+                <div className="space-y-1.5">
+                  <label htmlFor="edit-user-pwd-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                    Kata Sandi Baru <span className="text-zinc-400 font-normal">(Kosongkan jika tidak ingin mengubah)</span>
+                  </label>
+                  <input
+                    id="edit-user-pwd-field"
+                    type="password"
+                    placeholder="Minimal 6 karakter..."
+                    value={editPassword}
+                    onChange={(e) => setEditPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition"
+                  />
+                </div>
+
+                {/* Peran / Hak Akses */}
+                <div className="space-y-1.5">
+                  <label htmlFor="edit-user-role-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                    Peran & Hak Akses <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    id="edit-user-role-field"
+                    value={editRole}
+                    onChange={(e: any) => setEditRole(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
+                    disabled={currentUser.Role === 'admin'}
+                  >
+                    <option value="kasir">User (Kasir)</option>
+                    {currentUser.Role === 'creator' && (
+                      <>
+                        <option value="admin">Admin (Owner/Manager)</option>
+                        <option value="creator">Pembuat Aplikasi (Creator)</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                {/* Outlet Cafe / Warung */}
+                {editRole !== 'creator' && (
+                  <div className="space-y-1.5">
+                    <label htmlFor="edit-user-cafe-field" className="text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                      <Coffee className="h-3.5 w-3.5" /> Outlet Cafe / Warung <span className="text-rose-500">*</span>
+                    </label>
+                    {currentUser.Role === 'admin' ? (
+                      <input
+                        type="text"
+                        value={cafes.find((c) => c.id === currentUser.cafeId)?.namaToko || 'Outlet Anda'}
+                        disabled
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-[#1a1613]/50 text-zinc-500 dark:text-zinc-400 text-xs font-bold cursor-not-allowed"
+                      />
+                    ) : (
+                      <select
+                        id="edit-user-cafe-field"
+                        value={editCafeId}
+                        onChange={(e) => setEditCafeId(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs focus:outline-none focus:border-amber-500 transition font-bold"
+                        required
+                      >
+                        {cafes.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.namaToko}
+                          </option>
+                        ))}
+                        {cafes.length === 0 && <option value="cafe-maissy-coffee">Default Cafe (Maissy Coffee)</option>}
+                      </select>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Submit Action */}
-              <div className="pt-2 flex justify-end gap-3 font-semibold">
+              <div className="p-4 sm:p-5 border-t border-zinc-100 dark:border-zinc-800/80 bg-zinc-50/50 dark:bg-[#201c18]/50 flex justify-end gap-3 rounded-b-2xl font-semibold">
                 <button
                   type="button"
                   id="cancel-edit-user-form"

@@ -7,10 +7,46 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import http from 'http';
+import crypto from 'crypto';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer as createViteServer } from 'vite';
 import { User, Menu, Transaction, TransactionDetail, ActivityLog, Settings } from './src/types.js';
 import { loadFromFirestore, syncCollection, syncFullDatabase } from './firebase-server.js';
+
+// Cryptographic Password Hashing helper (SHA-256)
+function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
+
+// Role-Based Access Control (RBAC) authorization helpers
+function getRequestUser(req: express.Request): User | null {
+  const db = readDB();
+  const userId = req.body.actorId || req.body.userId || req.query.actorId || req.query.userId;
+  if (!userId) return null;
+  return db.users.find((u: User) => u.ID_User === String(userId)) || null;
+}
+
+function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const user = getRequestUser(req);
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Autentikasi diperlukan. Sesi tidak valid atau pengguna tidak ditemukan.' });
+  }
+  if (user.Role !== 'admin' && user.Role !== 'creator') {
+    return res.status(403).json({ success: false, message: 'Akses ditolak. Anda memerlukan hak akses Administrator untuk melakukan tindakan ini.' });
+  }
+  next();
+}
+
+function requireCreator(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const user = getRequestUser(req);
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Autentikasi diperlukan. Sesi tidak valid atau pengguna tidak ditemukan.' });
+  }
+  if (user.Role !== 'creator') {
+    return res.status(403).json({ success: false, message: 'Akses ditolak. Tindakan ini dibatasi hanya untuk Pembuat Aplikasi (Creator).' });
+  }
+  next();
+}
 
 const DB_PATH = path.join(process.cwd(), 'database.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'uploads');
@@ -471,7 +507,8 @@ async function startServer() {
       return res.status(401).json({ success: false, message: 'Email tidak terdaftar atau akun nonaktif' });
     }
 
-    if (user.Password !== password) {
+    // Support legacy plain text passwords or cryptographically hashed ones
+    if (user.Password !== password && user.Password !== hashPassword(password)) {
       return res.status(401).json({ success: false, message: 'Password salah' });
     }
 
@@ -510,7 +547,7 @@ async function startServer() {
       Email: email,
       Role: role || 'kasir',
       Status: 'active',
-      Password: password,
+      Password: hashPassword(password),
       Created_At: new Date().toISOString(),
       cafeId: cafeId || db.settings?.activeCafeId || 'cafe-maissy-coffee',
     };
@@ -543,7 +580,7 @@ async function startServer() {
       return res.status(404).json({ success: false, message: 'Email tidak ditemukan.' });
     }
 
-    db.users[userIndex].Password = newPassword;
+    db.users[userIndex].Password = hashPassword(newPassword);
 
     // Log the action
     const log: ActivityLog = {
@@ -637,7 +674,7 @@ async function startServer() {
   });
 
   // Users: Create User (Admin only action)
-  app.post('/api/users', (req, res) => {
+  app.post('/api/users', requireAdmin, (req, res) => {
     const { nama, email, password, role, status, actorId, cafeId } = req.body;
     const db = readDB();
 
@@ -652,7 +689,7 @@ async function startServer() {
       Email: email,
       Role: role,
       Status: status || 'active',
-      Password: password || '123456',
+      Password: hashPassword(password || '123456'),
       Created_At: new Date().toISOString(),
       cafeId: cafeId || db.settings?.activeCafeId || 'cafe-maissy-coffee',
     };
@@ -674,7 +711,7 @@ async function startServer() {
   });
 
   // Users: Toggle Status / Update User
-  app.put('/api/users/:id', (req, res) => {
+  app.put('/api/users/:id', requireAdmin, (req, res) => {
     const { id } = req.params;
     const { nama, email, password, role, status, actorId, cafeId } = req.body;
     const db = readDB();
@@ -698,7 +735,7 @@ async function startServer() {
       ...oldUser,
       Nama: nama !== undefined ? nama : oldUser.Nama,
       Email: email !== undefined ? email : oldUser.Email,
-      Password: password !== undefined ? password : oldUser.Password,
+      Password: password !== undefined ? (password === oldUser.Password ? password : hashPassword(password)) : oldUser.Password,
       Role: role !== undefined ? role : oldUser.Role,
       Status: status !== undefined ? status : oldUser.Status,
       cafeId: cafeId !== undefined ? cafeId : oldUser.cafeId,
@@ -719,7 +756,7 @@ async function startServer() {
   });
 
   // Users: Delete User
-  app.delete('/api/users/:id', (req, res) => {
+  app.delete('/api/users/:id', requireAdmin, (req, res) => {
     const { id } = req.params;
     const actorId = req.query.actorId || req.body.actorId;
     const db = readDB();
@@ -757,7 +794,7 @@ async function startServer() {
   });
 
   // Menus: Save / CRUD
-  app.post('/api/menus', (req, res) => {
+  app.post('/api/menus', requireAdmin, (req, res) => {
     const { nama, kategori, harga, status, fotoBase64, fotoFileName, fotoUrl, actorId } = req.body;
     const db = readDB();
 
@@ -814,7 +851,7 @@ async function startServer() {
     res.json({ success: true, menu: newMenu });
   });
 
-  app.put('/api/menus/:id', (req, res) => {
+  app.put('/api/menus/:id', requireAdmin, (req, res) => {
     const { id } = req.params;
     const { nama, kategori, harga, status, fotoBase64, fotoFileName, fotoUrl, actorId } = req.body;
     const db = readDB();
@@ -854,7 +891,7 @@ async function startServer() {
     res.json({ success: true, menu: db.menus[menuIndex] });
   });
 
-  app.delete('/api/menus/:id', (req, res) => {
+  app.delete('/api/menus/:id', requireAdmin, (req, res) => {
     const { id } = req.params;
     const { actorId } = req.query;
     const db = readDB();
@@ -908,7 +945,7 @@ async function startServer() {
     res.json(settingsResponse);
   });
 
-  app.put('/api/settings', (req, res) => {
+  app.put('/api/settings', requireAdmin, (req, res) => {
     const { namaToko, alamat, telepon, pesanFooter, googleSpreadsheetId, googleDriveFolderId, autoSync, logoUrl, actorId } = req.body;
     const db = readDB();
 
@@ -991,14 +1028,11 @@ async function startServer() {
     res.json(db.settings?.cafes || []);
   });
 
-  app.post('/api/cafes', (req, res) => {
+  app.post('/api/cafes', requireCreator, (req, res) => {
     const { id, namaToko, alamat, telepon, pesanFooter, email, password, actorId } = req.body;
     const db = readDB();
 
     const actor = db.users.find((u: User) => u.ID_User === actorId);
-    if (!actor || actor.Role !== 'creator') {
-      return res.status(403).json({ success: false, message: 'Hanya pembuat aplikasi (Creator) yang dapat mendaftarkan kafe/warung baru.' });
-    }
 
     if (!id || !namaToko) {
       return res.status(400).json({ success: false, message: 'ID dan Nama Kafe wajib diisi.' });
@@ -1048,7 +1082,7 @@ async function startServer() {
         Email: email,
         Role: 'admin',
         Status: 'active',
-        Password: password || '123456',
+        Password: hashPassword(password || '123456'),
         Created_At: new Date().toISOString(),
         cafeId: normalizedId,
       };
@@ -1057,7 +1091,7 @@ async function startServer() {
       db.activity_log.unshift({
         Timestamp: new Date().toISOString(),
         ID_User: actorId,
-        Nama_User: actor.Nama,
+        Nama_User: actor ? actor.Nama : 'System',
         Action: 'CREATE_USER',
         Module: 'USER_MANAGEMENT',
         Description: `Membuat pengguna admin baru: Admin ${namaToko} (Email: ${email}) untuk outlet ${namaToko}`,
@@ -1077,14 +1111,11 @@ async function startServer() {
     res.json({ success: true, cafe: newCafe, cafes: db.settings.cafes });
   });
 
-  app.put('/api/cafes/active', (req, res) => {
+  app.put('/api/cafes/active', requireCreator, (req, res) => {
     const { id, actorId } = req.body;
     const db = readDB();
 
     const actor = db.users.find((u: User) => u.ID_User === actorId);
-    if (!actor || actor.Role !== 'creator') {
-      return res.status(403).json({ success: false, message: 'Hanya pembuat aplikasi (Creator) yang dapat merubah kafe aktif.' });
-    }
 
     if (!db.settings.cafes) {
       db.settings.cafes = [];
@@ -1106,7 +1137,7 @@ async function startServer() {
     db.activity_log.unshift({
       Timestamp: new Date().toISOString(),
       ID_User: actorId,
-      Nama_User: actor.Nama,
+      Nama_User: actor ? actor.Nama : 'System',
       Action: 'SWITCH_ACTIVE_CAFE',
       Module: 'SETTINGS',
       Description: `Mengubah kafe aktif menjadi: ${targetCafe.namaToko} (ID: ${id})`,
@@ -1116,15 +1147,12 @@ async function startServer() {
     res.json({ success: true, activeCafeId: id, settings: db.settings });
   });
 
-  app.delete('/api/cafes/:id', (req, res) => {
+  app.delete('/api/cafes/:id', requireCreator, (req, res) => {
     const { id } = req.params;
     const { actorId } = req.query;
     const db = readDB();
 
     const actor = db.users.find((u: User) => u.ID_User === String(actorId));
-    if (!actor || actor.Role !== 'creator') {
-      return res.status(403).json({ success: false, message: 'Hanya pembuat aplikasi (Creator) yang dapat menghapus kafe.' });
-    }
 
     if (!db.settings.cafes) {
       db.settings.cafes = [];
@@ -1146,7 +1174,7 @@ async function startServer() {
     db.activity_log.unshift({
       Timestamp: new Date().toISOString(),
       ID_User: String(actorId),
-      Nama_User: actor.Nama,
+      Nama_User: actor ? actor.Nama : 'System',
       Action: 'DELETE_CAFE',
       Module: 'SETTINGS',
       Description: `Menghapus kafe/warung: ${targetCafe.namaToko} (ID: ${id})`,
@@ -1156,19 +1184,12 @@ async function startServer() {
     res.json({ success: true, message: `Kafe ${targetCafe.namaToko} berhasil dihapus.`, cafes: db.settings.cafes });
   });
 
-  app.post('/api/cafes/:id/reset', (req, res) => {
+  app.post('/api/cafes/:id/reset', requireCreator, (req, res) => {
     const { id } = req.params;
     const { actorId, mode } = req.body; // mode: 'transactions_only' | 'factory_reset'
     const db = readDB();
 
     const actor = db.users.find((u: User) => u.ID_User === String(actorId));
-    if (!actor) {
-      return res.status(403).json({ success: false, message: 'Pengguna tidak ditemukan.' });
-    }
-
-    if (actor.Role !== 'creator') {
-      return res.status(403).json({ success: false, message: 'Hanya pembuat aplikasi (Creator) yang memiliki akses untuk mereset data outlet.' });
-    }
 
     const targetCafe = db.settings.cafes?.find((c: any) => c.id === id);
     if (!targetCafe && id !== 'default' && id !== db.settings.activeCafeId) {

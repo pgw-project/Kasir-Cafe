@@ -9,6 +9,12 @@ import {
   writeBatch,
   Firestore
 } from 'firebase/firestore';
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  Auth
+} from 'firebase/auth';
 import fs from 'fs';
 import path from 'path';
 
@@ -27,11 +33,13 @@ try {
 
 // Initialize Firebase Client SDK safely on the server-side
 let firestore: Firestore | null = null;
+let auth: Auth | null = null;
 
 try {
   if (firebaseConfig && firebaseConfig.projectId) {
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     firestore = getFirestore(app, firebaseConfig.firestoreDatabaseId || undefined);
+    auth = getAuth(app);
     console.log('[Firebase Server] Client-side SDK initialized successfully on server-side.');
   } else {
     console.warn('[Firebase Server] Configuration not found or incomplete.');
@@ -40,7 +48,79 @@ try {
   console.error('[Firebase Server] Failed to initialize Firebase Client SDK on server:', error);
 }
 
-export { firestore };
+export { firestore, auth };
+
+// Required Operation types for FirestoreErrorInfo
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+  }
+}
+
+/**
+ * Standardized Firebase Skill Error Handler
+ */
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): never {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth?.currentUser?.uid || null,
+      email: auth?.currentUser?.email || null,
+      emailVerified: auth?.currentUser?.emailVerified || null,
+    },
+    operationType,
+    path
+  };
+  console.error('[Firestore Error]: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+/**
+ * Dynamically authenticates the backend server using email/password provider.
+ * If user does not exist, registers the system account dynamically.
+ */
+export async function authenticateServer() {
+  if (!firestore || !auth) {
+    console.warn('[Firebase Server] Skip server authentication: Auth/Firestore not initialized.');
+    return;
+  }
+
+  const email = 'system@maissy.com';
+  const password = 'systemPOSSecure2026!';
+
+  try {
+    console.log('[Firebase Server] Authenticating system server account...');
+    await signInWithEmailAndPassword(auth, email, password);
+    console.log('[Firebase Server] System account successfully authenticated on Firestore.');
+  } catch (signInError: any) {
+    // Handle registration if user doesn't exist
+    if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/invalid-email') {
+      console.log('[Firebase Server] System account not found. Registering system account programmatically...');
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        console.log('[Firebase Server] System account programmatically created and signed in.');
+      } catch (createError: any) {
+        console.error('[Firebase Server] Failed to create system account (make sure Email/Password Auth is enabled in Console):', createError.message);
+      }
+    } else {
+      console.error('[Firebase Server] Authentication failed:', signInError.message);
+    }
+  }
+}
 
 /**
  * Loads all data from Firestore collections with a fast-failing timeout.
@@ -51,6 +131,11 @@ export async function loadFromFirestore() {
     console.warn('[Firestore] Firestore is not initialized. Skipping cloud fetch (local database mode)...');
     return null;
   }
+
+  // Ensure authenticated before calling load
+  await authenticateServer().catch(err => {
+    console.error('[Firestore] Pre-load server authentication failed:', err);
+  });
   
   console.log('[Firestore] Fetching data from cloud Firestore using client-side credentials...');
   
@@ -60,7 +145,13 @@ export async function loadFromFirestore() {
     let totalDocs = 0;
 
     for (const col of collections) {
-      const snapshot = await getDocs(collection(firestore!, col));
+      let snapshot;
+      try {
+        snapshot = await getDocs(collection(firestore!, col));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.GET, col);
+      }
+
       const list: any[] = [];
       snapshot.forEach(doc => {
         list.push(doc.data());
@@ -71,7 +162,13 @@ export async function loadFromFirestore() {
     }
 
     // Load settings
-    const settingsDoc = await getDoc(doc(firestore!, 'settings', 'global'));
+    let settingsDoc;
+    try {
+      settingsDoc = await getDoc(doc(firestore!, 'settings', 'global'));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, 'settings/global');
+    }
+
     if (settingsDoc.exists()) {
       result['settings'] = settingsDoc.data();
       totalDocs++;
@@ -138,8 +235,12 @@ export async function syncCollection(col: string, newItems: any[]) {
   try {
     if (col === 'settings') {
       const cleanedSettings = cleanUndefined(newItems);
-      await setDoc(doc(firestore, 'settings', 'global'), cleanedSettings);
-      console.log('[Firestore] Settings synced to cloud.');
+      try {
+        await setDoc(doc(firestore, 'settings', 'global'), cleanedSettings);
+        console.log('[Firestore] Settings synced to cloud.');
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, 'settings/global');
+      }
       return;
     }
 
@@ -151,7 +252,13 @@ export async function syncCollection(col: string, newItems: any[]) {
                   'ID_Log';
 
     // 1. Get existing docs in Firestore for this collection
-    const snapshot = await getDocs(collection(firestore, col));
+    let snapshot;
+    try {
+      snapshot = await getDocs(collection(firestore, col));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, col);
+    }
+
     const existingIds = new Set<string>();
     snapshot.forEach(doc => {
       existingIds.add(doc.id);
@@ -168,7 +275,11 @@ export async function syncCollection(col: string, newItems: any[]) {
         batch.delete(doc(firestore, col, id));
         opCount++;
         if (opCount >= 400) {
-          await batch.commit();
+          try {
+            await batch.commit();
+          } catch (error) {
+            handleFirestoreError(error, OperationType.WRITE, col);
+          }
           batch = writeBatch(firestore);
           opCount = 0;
         }
@@ -182,14 +293,22 @@ export async function syncCollection(col: string, newItems: any[]) {
       batch.set(doc(firestore, col, id), cleanedItem);
       opCount++;
       if (opCount >= 400) {
-        await batch.commit();
+        try {
+          await batch.commit();
+        } catch (error) {
+          handleFirestoreError(error, OperationType.WRITE, col);
+        }
         batch = writeBatch(firestore);
         opCount = 0;
       }
     }
 
     if (opCount > 0) {
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, col);
+      }
     }
     console.log(`[Firestore] Collection '${col}' successfully synced (items count: ${newItems.length}).`);
   } catch (error) {
