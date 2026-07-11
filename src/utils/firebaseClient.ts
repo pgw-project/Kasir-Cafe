@@ -1313,6 +1313,7 @@ export function generateReceiptHtml(tx: Transaction, details: TransactionDetail[
     <head>
       <meta charset="utf-8">
       <title>Struk Belanja ${tx.ID_Transaksi}</title>
+      <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
       <style>
         body {
           font-family: 'Courier New', Courier, monospace;
@@ -1438,12 +1439,52 @@ export function generateReceiptHtml(tx: Transaction, details: TransactionDetail[
         </tr>
       </table>
       
+      ${tx.Metode_Bayar === 'QRIS' ? `
+        <div class="divider"></div>
+        <div class="text-center" style="margin: 15px 0;">
+          <p style="font-weight: bold; margin: 5px 0; font-size: 11px;">--- STRUK QRIS (LUNAS) ---</p>
+          <p style="margin: 3px 0; font-size: 9px; color: #555;">Scan QR di bawah untuk pembayaran:</p>
+          
+          <div id="qris-qr-container" style="margin: 12px auto; display: flex; justify-content: center; align-items: center; width: 140px; height: 140px; background: #fff; padding: 5px; border: 1px solid #eee; box-sizing: border-box;">
+            ${activeSettings.qrisImageUrl ? `<img src="${activeSettings.qrisImageUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; display: block;" alt="QRIS Owner" />` : ''}
+          </div>
+        </div>
+      ` : ''}
+
       <div class="divider"></div>
       
       <div class="footer text-center">
         <p style="margin: 5px 0;">${activeSettings.pesanFooter || 'Terima kasih!'}</p>
         <p style="margin: 5px 0; font-size: 8px;">support system By PGW</p>
       </div>
+
+      <script>
+        // Client-side QR generation
+        try {
+          var qrisPayload = \`${activeSettings.qrisPayload || ''}\`;
+          var qrisImageUrl = \`${activeSettings.qrisImageUrl || ''}\`;
+          var container = document.getElementById('qris-qr-container');
+
+          if (container) {
+            if (qrisImageUrl) {
+              // Already rendered in HTML
+            } else if (qrisPayload) {
+              // If owner specified a QRIS text payload, generate QR Code
+              var typeNumber = 0;
+              var errorCorrectionLevel = 'M';
+              var qr = qrcode(typeNumber, errorCorrectionLevel);
+              qr.addData(qrisPayload);
+              qr.make();
+              container.innerHTML = qr.createSvgTag(4, 0);
+            } else {
+              // Fallback / No QRIS
+              container.innerHTML = '<div style="font-size: 9px; color: #888; padding: 15px; border: 1px dashed #ccc;">QRIS Owner belum diunggah.<br>Silakan atur di Pengaturan.</div>';
+            }
+          }
+        } catch(e) {
+          console.error('Failed to render local QR:', e);
+        }
+      </script>
     </body>
     </html>
   `;

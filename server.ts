@@ -1631,7 +1631,9 @@ async function startServer() {
             <p style="font-weight: bold; margin: 5px 0; font-size: 11px;">--- STRUK QRIS (LUNAS) ---</p>
             <p style="margin: 3px 0; font-size: 9px; color: #555;">Scan QR di bawah untuk pembayaran:</p>
             
-            <div id="qris-qr-container" style="margin: 12px auto; display: flex; justify-content: center; align-items: center; width: 140px; height: 140px; background: #fff; padding: 5px; border: 1px solid #eee; box-sizing: border-box;"></div>
+            <div id="qris-qr-container" style="margin: 12px auto; display: flex; justify-content: center; align-items: center; width: 140px; height: 140px; background: #fff; padding: 5px; border: 1px solid #eee; box-sizing: border-box;">
+              ${settings.qrisImageUrl ? `<img src="${settings.qrisImageUrl}" style="max-width: 100%; max-height: 100%; object-fit: contain; display: block;" alt="QRIS Owner" />` : ''}
+            </div>
           </div>
         ` : ''}
 
@@ -1651,8 +1653,7 @@ async function startServer() {
 
             if (container) {
               if (qrisImageUrl) {
-                // If owner uploaded a QRIS image, show it directly!
-                container.innerHTML = '<img src="' + qrisImageUrl + '" style="max-width: 100%; max-height: 100%; object-fit: contain;" />';
+                // Already rendered in HTML
               } else if (qrisPayload) {
                 // If owner specified a QRIS text payload, generate QR Code
                 var typeNumber = 0;

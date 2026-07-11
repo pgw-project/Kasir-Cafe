@@ -926,24 +926,7 @@ export default function App() {
 
       {/* Main Panel Area */}
       <main id="main-content-panel" className="flex-1 p-4 sm:p-6 md:p-8 lg:p-10 max-w-7xl mx-auto w-full overflow-y-auto">
-        {isClientMode && (
-          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-amber-800 dark:text-amber-400 font-medium leading-relaxed flex items-start gap-3 shadow-sm mb-6">
-            <ShieldAlert className="h-5 w-5 text-amber-600 dark:text-amber-500 flex-shrink-0 mt-0.5 animate-pulse" />
-            <div>
-              <p className="font-bold text-sm">⚠️ Mode Lokal Offline Aktif (Sinkronisasi Cloud Nonaktif)</p>
-              <p className="mt-1 text-[11px] text-zinc-600 dark:text-zinc-300">
-                Aplikasi saat ini tidak mendeteksi adanya server backend Express (atau dideploy sebagai statis SPA). 
-                Data Anda saat ini disimpan secara mandiri di <strong>memori browser (localStorage) perangkat ini saja</strong>.
-              </p>
-              <p className="mt-1.5 text-[11px] text-zinc-600 dark:text-zinc-300">
-                <strong>Mengapa HP/Tablet A & B berbeda?</strong> Karena tidak ada server cloud yang terhubung, setiap perangkat bertindak sebagai database mandiri. Perubahan data di HP A tidak akan tersinkronisasi ke HP B.
-              </p>
-              <p className="mt-2 text-[11px] font-bold text-amber-700 dark:text-amber-400">
-                💡 Solusi Sinkronisasi: Deploy dan jalankan server backend Express (`server.ts`) agar ia dapat mengoordinasikan database terpusat via Firebase Firestore ke seluruh perangkat Anda.
-              </p>
-            </div>
-          </div>
-        )}
+
 
         <AnimatePresence mode="wait">
           <motion.div
