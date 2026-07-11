@@ -688,6 +688,16 @@ export default function ReportView({ currentUser }: ReportViewProps) {
                   <p className="text-[9px] text-zinc-400 dark:text-zinc-500 leading-tight">
                     *Akses Bluetooth mungkin diblokir di dalam iframe pratinjau. Jika tombol tidak merespons, buka aplikasi di Tab Baru.
                   </p>
+
+                  {/* Bluetooth Printer Troubleshooting Guide */}
+                  <div className="mt-2.5 pt-2 border-t border-amber-500/10 text-[10px] text-zinc-500 dark:text-zinc-400 space-y-1.5 leading-normal">
+                    <span className="font-bold text-amber-700 dark:text-amber-400 block">💡 Panduan Sinkronisasi Printer di HP/Tablet:</span>
+                    <ul className="list-disc pl-3.5 space-y-1">
+                      <li><strong>Koneksi HTTPS:</strong> Pastikan Anda membuka aplikasi ini menggunakan protokol aman <code className="font-mono bg-zinc-100 dark:bg-zinc-800 px-0.5 rounded text-[9px]">https://</code>. Google Chrome memblokir Web Bluetooth pada <code className="font-mono bg-zinc-100 dark:bg-zinc-800 px-0.5 rounded text-[9px]">http://</code> biasa.</li>
+                      <li><strong>Izin Lokasi & GPS (Android):</strong> Chrome membutuhkan <strong>GPS aktif</strong> & izin <strong>Lokasi</strong> untuk mendeteksi perangkat Bluetooth Low Energy (BLE). Aktifkan GPS HP Anda.</li>
+                      <li><strong>Tipe Bluetooth BLE:</strong> Browser hanya mendukung Bluetooth Low Energy (BLE). Jika printer Anda bertipe Bluetooth Classic (SPP), gunakan tombol <strong>"Cetak lewat Sistem (PDF)"</strong> di bawah untuk mencetak via aplikasi perantara gratis seperti <strong>RawBT</strong> atau <strong>ESCPOS Print App</strong> di HP.</li>
+                    </ul>
+                  </div>
                 </div>
               )}
             </div>
