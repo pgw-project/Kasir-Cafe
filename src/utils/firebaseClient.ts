@@ -647,6 +647,8 @@ export const clientFirebaseRouter = {
                 telepon: userCafe.telepon,
                 pesanFooter: userCafe.pesanFooter,
                 logoUrl: userCafe.logoUrl,
+                qrisPayload: userCafe.qrisPayload,
+                qrisImageUrl: userCafe.qrisImageUrl,
               };
             }
           }
@@ -662,7 +664,7 @@ export const clientFirebaseRouter = {
       const ldb = getLocalDb();
       const settings = ldb.get('settings') || {};
       const users = ldb.get('users') || [];
-      const { namaToko, alamat, telepon, pesanFooter, googleSpreadsheetId, googleDriveFolderId, autoSync, logoUrl, actorId } = body;
+      const { namaToko, alamat, telepon, pesanFooter, googleSpreadsheetId, googleDriveFolderId, autoSync, logoUrl, qrisPayload, qrisImageUrl, actorId } = body;
 
       const actor = users.find((u: any) => u.ID_User === actorId);
 
@@ -680,6 +682,8 @@ export const clientFirebaseRouter = {
             telepon: telepon || settings.cafes[cafeIndex].telepon,
             pesanFooter: pesanFooter || settings.cafes[cafeIndex].pesanFooter,
             logoUrl: logoUrl !== undefined ? logoUrl : settings.cafes[cafeIndex].logoUrl,
+            qrisPayload: qrisPayload !== undefined ? qrisPayload : settings.cafes[cafeIndex].qrisPayload,
+            qrisImageUrl: qrisImageUrl !== undefined ? qrisImageUrl : settings.cafes[cafeIndex].qrisImageUrl,
           };
 
           // If this is the active cafe, ALSO update the top-level settings so they are in sync!
@@ -689,6 +693,8 @@ export const clientFirebaseRouter = {
             settings.telepon = settings.cafes[cafeIndex].telepon;
             settings.pesanFooter = settings.cafes[cafeIndex].pesanFooter;
             settings.logoUrl = settings.cafes[cafeIndex].logoUrl;
+            settings.qrisPayload = settings.cafes[cafeIndex].qrisPayload;
+            settings.qrisImageUrl = settings.cafes[cafeIndex].qrisImageUrl;
           }
         }
       } else {
@@ -701,6 +707,8 @@ export const clientFirebaseRouter = {
         settings.googleDriveFolderId = googleDriveFolderId !== undefined ? googleDriveFolderId : settings.googleDriveFolderId;
         settings.autoSync = autoSync !== undefined ? autoSync : settings.autoSync;
         settings.logoUrl = logoUrl !== undefined ? logoUrl : settings.logoUrl;
+        settings.qrisPayload = qrisPayload !== undefined ? qrisPayload : settings.qrisPayload;
+        settings.qrisImageUrl = qrisImageUrl !== undefined ? qrisImageUrl : settings.qrisImageUrl;
 
         // Sync with active cafe entry
         if (settings.cafes && settings.activeCafeId) {
@@ -713,6 +721,8 @@ export const clientFirebaseRouter = {
               telepon: settings.telepon,
               pesanFooter: settings.pesanFooter,
               logoUrl: settings.logoUrl,
+              qrisPayload: settings.qrisPayload,
+              qrisImageUrl: settings.qrisImageUrl,
             };
           }
         }
