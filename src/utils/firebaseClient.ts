@@ -34,6 +34,43 @@ try {
 
 export { db };
 
+// Helper to sync client-side data to Central Server URL if enabled
+async function syncLocalToCentralServer(col: string, data: any) {
+  try {
+    const settingsRaw = localStorage.getItem('pos_settings');
+    if (!settingsRaw) return;
+    const settings = JSON.parse(settingsRaw);
+    if (!settings.centralSyncEnabled || !settings.centralServerUrl) return;
+
+    console.log(`[Client Central Sync] Sending client sync to central server for collection '${col}'`);
+
+    const payload = {
+      timestamp: new Date().toISOString(),
+      resource: col,
+      secret: settings.centralServerSecret || '',
+      activeCafeId: settings.activeCafeId || 'cafe-maissy-coffee',
+      data: data
+    };
+
+    const res = await fetch(settings.centralServerUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Central-Sync-Secret': settings.centralServerSecret || '',
+        'X-Central-Sync-Resource': col
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      throw new Error(`Status: ${res.status}`);
+    }
+    console.log(`[Client Central Sync] Client sync successful for '${col}'`);
+  } catch (err: any) {
+    console.error(`[Client Central Sync] Failed client central sync for '${col}':`, err.message || err);
+  }
+}
+
 // Helper to manage high-fidelity LocalStorage database
 const getLocalDb = () => {
   const collections = ['users', 'menus', 'transactions', 'transaction_details', 'activity_log', 'settings'];
@@ -121,6 +158,10 @@ const getLocalDb = () => {
         // Asynchronously synchronize client-side changes to the central Firestore cloud server
         syncLocalCollectionToFirestore(col, data).catch(err => {
           console.error(`[Local DB Sync] Async upload failed for '${col}':`, err);
+        });
+        // Asynchronously synchronize client-side changes to the Central Server Webhook
+        syncLocalToCentralServer(col, data).catch(err => {
+          console.error(`[Local DB Sync] Async central webhook sync failed for '${col}':`, err);
         });
       } catch (e) {
         console.error(`[Local DB] Error saving ${col}:`, e);

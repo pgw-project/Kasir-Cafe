@@ -82,6 +82,9 @@ export interface Settings {
   googleSpreadsheetId: string;
   googleDriveFolderId: string;
   autoSync: boolean;
+  centralServerUrl?: string;
+  centralServerSecret?: string;
+  centralSyncEnabled?: boolean;
   cafes?: Cafe[];
   activeCafeId?: string;
 }

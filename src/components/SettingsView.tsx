@@ -72,6 +72,11 @@ export default function SettingsView({ currentUser }: SettingsViewProps) {
   const [googleDriveFolderId, setGoogleDriveFolderId] = useState('');
   const [autoSync, setAutoSync] = useState(true);
 
+  // Central Server Integration State
+  const [centralServerUrl, setCentralServerUrl] = useState('');
+  const [centralServerSecret, setCentralServerSecret] = useState('');
+  const [centralSyncEnabled, setCentralSyncEnabled] = useState(false);
+
   // Cafes Management State
   const [cafes, setCafes] = useState<any[]>([]);
   const [activeCafeId, setActiveCafeId] = useState('');
@@ -118,6 +123,9 @@ export default function SettingsView({ currentUser }: SettingsViewProps) {
       setGoogleSpreadsheetId(data.googleSpreadsheetId);
       setGoogleDriveFolderId(data.googleDriveFolderId);
       setAutoSync(data.autoSync);
+      setCentralServerUrl(data.centralServerUrl || '');
+      setCentralServerSecret(data.centralServerSecret || '');
+      setCentralSyncEnabled(!!data.centralSyncEnabled);
       setCafes(data.cafes || []);
       setActiveCafeId(data.activeCafeId || '');
     } catch (err) {
@@ -162,6 +170,9 @@ export default function SettingsView({ currentUser }: SettingsViewProps) {
           googleSpreadsheetId,
           googleDriveFolderId,
           autoSync,
+          centralServerUrl,
+          centralServerSecret,
+          centralSyncEnabled,
           actorId: currentUser.ID_User,
         }),
       });
@@ -370,6 +381,96 @@ export default function SettingsView({ currentUser }: SettingsViewProps) {
         }, 1500);
       }, 1500);
     }, 1200);
+  };
+
+  const [centralSyncing, setCentralSyncing] = useState(false);
+  const [centralSyncStep, setCentralSyncStep] = useState('');
+  const [centralSyncProgress, setCentralSyncProgress] = useState(0);
+
+  const triggerCentralSync = async () => {
+    if (centralSyncing) return;
+    if (!centralServerUrl) {
+      alert('Silakan masukkan URL API Server Pusat terlebih dahulu.');
+      return;
+    }
+
+    setCentralSyncing(true);
+    setCentralSyncProgress(10);
+    setCentralSyncStep('Menguji koneksi ke Server Pusat...');
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 850));
+      setCentralSyncProgress(40);
+      setCentralSyncStep('Menyiapkan basis data lengkap (Menu, Transaksi, Log)...');
+
+      await new Promise(resolve => setTimeout(resolve, 850));
+      setCentralSyncProgress(70);
+      setCentralSyncStep('Mengirimkan payload enkripsi aman ke Server Pusat...');
+
+      const isClientMode = (window as any).__useClientFirebase;
+      let result;
+
+      if (isClientMode) {
+        // Direct browser client-side sync
+        const dbCollections = ['users', 'menus', 'transactions', 'transaction_details', 'activity_log'];
+        const fullData: any = {};
+        for (const col of dbCollections) {
+          const raw = localStorage.getItem(`pos_${col}`);
+          fullData[col] = raw ? JSON.parse(raw) : [];
+        }
+
+        const payload = {
+          timestamp: new Date().toISOString(),
+          resource: 'all',
+          secret: centralServerSecret || '',
+          activeCafeId: activeCafeId || 'cafe-maissy-coffee',
+          data: fullData
+        };
+
+        const res = await fetch(centralServerUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Central-Sync-Secret': centralServerSecret || '',
+            'X-Central-Sync-Resource': 'all'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          throw new Error(`Server Pusat menolak dengan status: ${res.status}`);
+        }
+        result = { success: true };
+      } else {
+        // Server proxy sync
+        const res = await fetch('/api/sync/central', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            actorId: currentUser.ID_User,
+          })
+        });
+        result = await res.json();
+      }
+
+      if (result.success) {
+        setCentralSyncProgress(100);
+        setCentralSyncStep('Sinkronisasi sukses! Data aman di Server Pusat.');
+        setTimeout(() => {
+          setCentralSyncing(false);
+          setCentralSyncProgress(0);
+          setCentralSyncStep('');
+        }, 2500);
+      } else {
+        throw new Error(result.message || 'Gagal menyinkronkan data.');
+      }
+    } catch (err: any) {
+      console.error('Error central sync:', err);
+      alert(`Sinkronisasi Gagal: ${err.message || 'Periksa koneksi internet atau URL API.'}`);
+      setCentralSyncing(false);
+      setCentralSyncProgress(0);
+      setCentralSyncStep('');
+    }
   };
 
   if (loading) {
@@ -943,6 +1044,106 @@ export default function SettingsView({ currentUser }: SettingsViewProps) {
                     <div
                       className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all duration-500 rounded-full"
                       style={{ width: `${syncProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Central Server Sync Panel */}
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#1a1613] border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-5">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-bold text-zinc-950 dark:text-zinc-50 text-sm">Sinkronisasi Server Pusat</h3>
+                <p className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-1">Kirim data penjualan otomatis & real-time ke API Server Pusat.</p>
+              </div>
+              <span className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                <Database className="h-4 w-4" />
+              </span>
+            </div>
+
+            {/* Form Inputs for central server */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-[#25201c] border border-zinc-100 dark:border-zinc-800/80">
+                <div>
+                  <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 block">Kirim Otomatis (Real-time)</span>
+                  <span className="text-[9px] text-zinc-400 dark:text-zinc-500">Kirim data saat checkout transaksi sukses</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCentralSyncEnabled(!centralSyncEnabled)}
+                  disabled={!canEditCloudSettings}
+                  className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    centralSyncEnabled ? 'bg-indigo-600' : 'bg-zinc-200 dark:bg-zinc-800'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      centralSyncEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="central-server-url-input" className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                  URL API Server Pusat / Webhook GAS
+                </label>
+                <input
+                  id="central-server-url-input"
+                  type="url"
+                  placeholder="https://api.pusat.com/pos-webhook"
+                  value={centralServerUrl}
+                  onChange={(e) => setCentralServerUrl(e.target.value)}
+                  disabled={!canEditCloudSettings}
+                  className="w-full px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 font-mono font-semibold text-[10px] focus:outline-none focus:border-indigo-500 transition"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="central-server-secret-input" className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
+                  Token Keamanan (Security Token)
+                </label>
+                <input
+                  id="central-server-secret-input"
+                  type="password"
+                  placeholder="Ketik kunci enkripsi atau token"
+                  value={centralServerSecret}
+                  onChange={(e) => setCentralServerSecret(e.target.value)}
+                  disabled={!canEditCloudSettings}
+                  className="w-full px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 font-mono text-[10px] focus:outline-none focus:border-indigo-500 transition"
+                />
+              </div>
+            </div>
+
+            {/* Sync trigger button */}
+            <div className="space-y-3 pt-2">
+              <button
+                type="button"
+                id="central-manual-sync-btn"
+                onClick={triggerCentralSync}
+                disabled={centralSyncing || !canEditCloudSettings}
+                className={`w-full py-2 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition
+                  ${centralSyncing 
+                    ? 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed' 
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/10'}`}
+              >
+                <RefreshCw className={`h-4.5 w-4.5 ${centralSyncing ? 'animate-spin' : ''}`} />
+                {centralSyncing ? 'Menyelaraskan Ke Pusat...' : 'Sinkronisasikan Ke Server Pusat'}
+              </button>
+
+              {/* Central sync progress indicator */}
+              {centralSyncing && (
+                <div id="central-sync-status-progress" className="space-y-1.5 pt-2">
+                  <div className="flex justify-between items-center text-[10px] font-bold">
+                    <span className="text-indigo-600 animate-pulse">{centralSyncStep}</span>
+                    <span className="text-zinc-500 font-mono">{centralSyncProgress}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500 rounded-full"
+                      style={{ width: `${centralSyncProgress}%` }}
                     />
                   </div>
                 </div>

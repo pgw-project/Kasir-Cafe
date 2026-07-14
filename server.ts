@@ -398,6 +398,44 @@ function readDB() {
   return globalDb;
 }
 
+// Send changes to Central Server Webhook
+async function syncToCentralServer(data: any, resource?: string) {
+  try {
+    const settings = data.settings || {};
+    if (!settings.centralSyncEnabled || !settings.centralServerUrl) {
+      return;
+    }
+
+    console.log(`[Central Sync] Sending sync request to central server for resource: ${resource || 'all'}`);
+
+    const payload = {
+      timestamp: new Date().toISOString(),
+      resource: resource || 'all',
+      secret: settings.centralServerSecret || '',
+      activeCafeId: settings.activeCafeId || 'cafe-maissy-coffee',
+      data: resource ? (resource === 'settings' ? data.settings : data[resource]) : data
+    };
+
+    const res = await fetch(settings.centralServerUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Central-Sync-Secret': settings.centralServerSecret || '',
+        'X-Central-Sync-Resource': resource || 'all'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      throw new Error(`Central Server responded with status: ${res.status}`);
+    }
+
+    console.log(`[Central Sync] Synchronization with central server successful for resource: ${resource || 'all'}`);
+  } catch (error: any) {
+    console.error(`[Central Sync] Failed to sync with central server:`, error.message || error);
+  }
+}
+
 // Write database helper
 function writeDB(data: any, resource?: string) {
   try {
@@ -417,6 +455,11 @@ function writeDB(data: any, resource?: string) {
         console.error('[Firestore] Failed to async sync full database:', err);
       });
     }
+
+    // Asynchronously synchronize changes to Central Server Webhook
+    syncToCentralServer(data, resource).catch(err => {
+      console.error('[Central Sync] Async central server sync error:', err);
+    });
 
     broadcastToAll({
       type: 'db_update',
@@ -974,7 +1017,7 @@ async function startServer() {
   });
 
   app.put('/api/settings', requireAdmin, (req, res) => {
-    const { namaToko, alamat, telepon, pesanFooter, googleSpreadsheetId, googleDriveFolderId, autoSync, logoUrl, qrisPayload, qrisImageUrl, actorId } = req.body;
+    const { namaToko, alamat, telepon, pesanFooter, googleSpreadsheetId, googleDriveFolderId, autoSync, logoUrl, qrisPayload, qrisImageUrl, centralServerUrl, centralServerSecret, centralSyncEnabled, actorId } = req.body;
     const db = readDB();
 
     const actor = db.users.find((u: User) => u.ID_User === actorId);
@@ -1038,6 +1081,9 @@ async function startServer() {
         logoUrl: finalLogoUrl !== undefined ? finalLogoUrl : db.settings.logoUrl,
         qrisPayload: qrisPayload !== undefined ? qrisPayload : db.settings.qrisPayload,
         qrisImageUrl: qrisImageUrl !== undefined ? qrisImageUrl : db.settings.qrisImageUrl,
+        centralServerUrl: centralServerUrl !== undefined ? centralServerUrl : db.settings.centralServerUrl,
+        centralServerSecret: centralServerSecret !== undefined ? centralServerSecret : db.settings.centralServerSecret,
+        centralSyncEnabled: centralSyncEnabled !== undefined ? centralSyncEnabled : db.settings.centralSyncEnabled,
       };
 
       // Also update the active cafe inside db.settings.cafes so that its settings are saved!
@@ -1196,6 +1242,67 @@ async function startServer() {
 
     writeDB(db, 'settings');
     res.json({ success: true, activeCafeId: id, settings: db.settings });
+  });
+
+  // --- MANUAL CENTRAL SERVER SYNC ---
+  app.post('/api/sync/central', requireAdmin, async (req, res) => {
+    const db = readDB();
+    const settings = db.settings || {};
+
+    if (!settings.centralServerUrl) {
+      return res.status(400).json({ success: false, message: 'URL API Server Pusat belum dikonfigurasi di pengaturan.' });
+    }
+
+    try {
+      console.log('[Central Sync] Manual trigger initiated. Sending full database...');
+      
+      const payload = {
+        timestamp: new Date().toISOString(),
+        resource: 'all',
+        secret: settings.centralServerSecret || '',
+        activeCafeId: settings.activeCafeId || 'cafe-maissy-coffee',
+        data: db
+      };
+
+      const syncRes = await fetch(settings.centralServerUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Central-Sync-Secret': settings.centralServerSecret || '',
+          'X-Central-Sync-Resource': 'all'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!syncRes.ok) {
+        throw new Error(`Server Pusat merespon dengan status: ${syncRes.status}`);
+      }
+
+      const text = await syncRes.text();
+      let responseData = {};
+      try {
+        responseData = JSON.parse(text);
+      } catch (e) {
+        responseData = { message: text };
+      }
+
+      // Add audit log
+      const actor = db.users.find((u: User) => u.ID_User === req.body.actorId) || { Nama: 'Admin' };
+      db.activity_log.unshift({
+        Timestamp: new Date().toISOString(),
+        ID_User: req.body.actorId || 'SYSTEM',
+        Nama_User: actor.Nama,
+        Action: 'CENTRAL_SYNC',
+        Module: 'SETTINGS',
+        Description: 'Sinkronisasi manual seluruh basis data ke Server Pusat berhasil dilakukan.',
+      });
+      writeDB(db, 'activity_log');
+
+      res.json({ success: true, message: 'Sinkronisasi seluruh data ke Server Pusat berhasil!', response: responseData });
+    } catch (error: any) {
+      console.error('[Central Sync] Manual central sync failed:', error);
+      res.status(500).json({ success: false, message: `Sinkronisasi gagal: ${error.message || error}` });
+    }
   });
 
   app.delete('/api/cafes/:id', requireCreator, (req, res) => {
