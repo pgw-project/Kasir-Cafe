@@ -95,6 +95,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
  */
 export async function authenticateServer() {
   if (!firestore || !auth) {
+    console.warn('[Firebase Server] Skip server authentication: Auth/Firestore not initialized.');
     return;
   }
 
@@ -102,20 +103,26 @@ export async function authenticateServer() {
   const password = 'systemPOSSecure2026!';
 
   try {
+    console.log('[Firebase Server] Authenticating system server account...');
     await signInWithEmailAndPassword(auth, email, password);
     console.log('[Firebase Server] System account successfully authenticated on Firestore.');
   } catch (signInError: any) {
     if (signInError.code === 'auth/operation-not-allowed') {
-      console.log('[Firebase Server] System authentication is inactive. Running in local database mode.');
+      console.warn('[Firebase Server] Email/Password Sign-in provider is disabled in Firebase Console. Please enable the Email/Password provider under Authentication -> Sign-in method in the Firebase Console if you wish to enable server-side database synchronization, otherwise the app continues with local cache.');
     } else if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential' || signInError.code === 'auth/invalid-email') {
+      console.log('[Firebase Server] System account not found. Registering system account programmatically...');
       try {
         await createUserWithEmailAndPassword(auth, email, password);
-        console.log('[Firebase Server] System account successfully prepared.');
+        console.log('[Firebase Server] System account programmatically created and signed in.');
       } catch (createError: any) {
-        console.log('[Firebase Server] Database is running in offline local mode.');
+        if (createError.code === 'auth/operation-not-allowed') {
+          console.warn('[Firebase Server] Email/Password Sign-in provider is disabled in Firebase Console. Please enable the Email/Password provider under Authentication -> Sign-in method in the Firebase Console if you wish to enable server-side database synchronization, otherwise the app continues with local cache.');
+        } else {
+          console.error('[Firebase Server] Failed to create system account (make sure Email/Password Auth is enabled in Console):', createError.message);
+        }
       }
     } else {
-      console.log('[Firebase Server] Database is running in offline local mode.');
+      console.error('[Firebase Server] Authentication failed:', signInError.message);
     }
   }
 }
@@ -132,13 +139,8 @@ export async function loadFromFirestore() {
 
   // Ensure authenticated before calling load
   await authenticateServer().catch(err => {
-    // Catch silently
+    console.error('[Firestore] Pre-load server authentication failed:', err);
   });
-  
-  if (!auth || !auth.currentUser) {
-    console.log('[Firestore] Running in local database mode.');
-    return null;
-  }
   
   console.log('[Firestore] Fetching data from cloud Firestore using client-side credentials...');
   
@@ -237,12 +239,8 @@ export async function syncCollection(col: string, newItems: any[]) {
 
   // Ensure authenticated before calling write operation
   await authenticateServer().catch(err => {
-    // Catch silently
+    console.error(`[Firestore] Pre-sync server authentication failed for collection '${col}':`, err);
   });
-  
-  if (!auth || !auth.currentUser) {
-    return;
-  }
   
   try {
     if (col === 'settings') {
@@ -339,12 +337,8 @@ export async function syncFullDatabase(db: any) {
 
   // Ensure authenticated before calling sync
   await authenticateServer().catch(err => {
-    // Catch silently
+    console.error('[Firestore] Pre-sync-all server authentication failed:', err);
   });
-  
-  if (!auth || !auth.currentUser) {
-    return;
-  }
   
   console.log('[Firestore] Syncing full database to cloud...');
   const promises = [
