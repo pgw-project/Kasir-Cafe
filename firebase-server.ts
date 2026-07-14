@@ -236,11 +236,6 @@ export async function syncCollection(col: string, newItems: any[]) {
     console.warn(`[Firestore] Firestore is not initialized. Skipping sync of collection '${col}'`);
     return;
   }
-
-  // Ensure authenticated before calling write operation
-  await authenticateServer().catch(err => {
-    console.error(`[Firestore] Pre-sync server authentication failed for collection '${col}':`, err);
-  });
   
   try {
     if (col === 'settings') {
@@ -334,11 +329,6 @@ export async function syncFullDatabase(db: any) {
     console.warn('[Firestore] Firestore is not initialized. Skipping full database sync...');
     return;
   }
-
-  // Ensure authenticated before calling sync
-  await authenticateServer().catch(err => {
-    console.error('[Firestore] Pre-sync-all server authentication failed:', err);
-  });
   
   console.log('[Firestore] Syncing full database to cloud...');
   const promises = [
