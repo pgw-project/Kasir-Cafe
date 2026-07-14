@@ -118,6 +118,10 @@ const getLocalDb = () => {
     set: (col: string, data: any) => {
       try {
         localStorage.setItem(`pos_${col}`, JSON.stringify(data));
+        // Asynchronously synchronize client-side changes to the central Firestore cloud server
+        syncLocalCollectionToFirestore(col, data).catch(err => {
+          console.error(`[Local DB Sync] Async upload failed for '${col}':`, err);
+        });
       } catch (e) {
         console.error(`[Local DB] Error saving ${col}:`, e);
       }
@@ -131,13 +135,171 @@ const getLocalDb = () => {
   return dbInstance;
 };
 
+/**
+ * Recursively cleans undefined values and replaces them with null to prevent
+ * Firestore serialization errors on client-side writes.
+ */
+function cleanUndefined(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return null;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => cleanUndefined(item));
+  }
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (val !== undefined) {
+        cleaned[key] = cleanUndefined(val);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
+/**
+ * Pushes client-side localStorage writes directly to the central cloud Firestore database.
+ */
+export async function syncLocalCollectionToFirestore(col: string, data: any) {
+  if (!db) {
+    console.warn('[Firebase Client Sync] Firestore is not initialized. Skipping cloud sync...');
+    return;
+  }
+  try {
+    if (col === 'settings') {
+      const cleanedSettings = cleanUndefined(data);
+      await setDoc(doc(db, 'settings', 'global'), cleanedSettings);
+      console.log('[Firebase Client Sync] Settings successfully synchronized to cloud Firestore.');
+      return;
+    }
+
+    const idKey = col === 'users' ? 'ID_User' :
+                  col === 'menus' ? 'ID_Menu' :
+                  col === 'transactions' ? 'ID_Transaksi' :
+                  col === 'transaction_details' ? 'ID_Detail' :
+                  col === 'activity_log' ? 'Timestamp' :
+                  'ID_Log';
+
+    // 1. Fetch current cloud documents to perform differential synchronization (orphans pruning)
+    const snapshot = await getDocs(collection(db, col));
+    const existingIds = new Set<string>();
+    snapshot.forEach(doc => {
+      existingIds.add(doc.id);
+    });
+
+    const newItems = Array.isArray(data) ? data : [];
+    const newItemsIds = new Set(newItems.map(item => item[idKey]).filter(Boolean));
+
+    let batch = writeBatch(db);
+    let opCount = 0;
+
+    // 2. Remove orphaned cloud documents not present in the new set
+    for (const id of existingIds) {
+      if (!newItemsIds.has(id)) {
+        batch.delete(doc(db, col, id));
+        opCount++;
+        if (opCount >= 400) {
+          await batch.commit();
+          batch = writeBatch(db);
+          opCount = 0;
+        }
+      }
+    }
+
+    // 3. Upsert current local documents to the cloud
+    for (const item of newItems) {
+      const id = item[idKey] || `log_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+      const cleanedItem = cleanUndefined(item);
+      batch.set(doc(db, col, id), cleanedItem);
+      opCount++;
+      if (opCount >= 400) {
+        await batch.commit();
+        batch = writeBatch(db);
+        opCount = 0;
+      }
+    }
+
+    if (opCount > 0) {
+      await batch.commit();
+    }
+    console.log(`[Firebase Client Sync] Collection '${col}' successfully synchronized to cloud Firestore (items: ${newItems.length}).`);
+  } catch (error) {
+    console.error(`[Firebase Client Sync] Error syncing collection '${col}' to cloud Firestore:`, error);
+  }
+}
+
+/**
+ * Pulls latest data from the central cloud Firestore database and saves it to localStorage.
+ */
+export async function pullFromFirestoreToLocal() {
+  if (!db) {
+    console.warn('[Firebase Client Pull] Firestore is not initialized. Skipping cloud fetch...');
+    return;
+  }
+  console.log('[Firebase Client Pull] Fetching latest data from central cloud Firestore...');
+  try {
+    const collections = ['users', 'menus', 'transactions', 'transaction_details', 'activity_log'];
+    let pulledCount = 0;
+
+    for (const col of collections) {
+      const snapshot = await getDocs(collection(db, col));
+      const list: any[] = [];
+      snapshot.forEach(doc => {
+        list.push(doc.data());
+      });
+
+      if (list.length > 0) {
+        // Enforce chronological sorting for feed-like collections
+        if (col === 'transactions') {
+          list.sort((a, b) => new Date(b.Tanggal).getTime() - new Date(a.Tanggal).getTime());
+        } else if (col === 'activity_log') {
+          list.sort((a, b) => new Date(b.Timestamp).getTime() - new Date(a.Timestamp).getTime());
+        }
+        localStorage.setItem(`pos_${col}`, JSON.stringify(list));
+        pulledCount += list.length;
+        console.log(`[Firebase Client Pull] Pulled ${list.length} documents for collection '${col}' into local cache.`);
+      }
+    }
+
+    const settingsDoc = await getDoc(doc(db, 'settings', 'global'));
+    if (settingsDoc.exists()) {
+      localStorage.setItem('pos_settings', JSON.stringify(settingsDoc.data()));
+      pulledCount++;
+      console.log('[Firebase Client Pull] Pulled global settings into local cache.');
+    }
+
+    if (pulledCount > 0) {
+      // Dispatch standard update event to trigger reactive rendering across components
+      window.dispatchEvent(new CustomEvent('ws_db_update', { detail: { type: 'db_update', resource: 'all' } }));
+    }
+  } catch (error) {
+    console.error('[Firebase Client Pull] Error pulling data from cloud Firestore:', error);
+  }
+}
+
 // Seeding helper is bypassed on client to avoid "Missing or insufficient permissions"
 async function ensureSeeded() {
   console.log('[Firebase Client] Client-side direct seeding bypassed. Initializing LocalStorage database on-demand.');
+  
+  // Pull initial cloud Firestore data to populate localStorage at startup
+  pullFromFirestoreToLocal().catch(err => {
+    console.error('[Firebase Client] Startup Firestore pull failed:', err);
+  });
 }
 
 // Trigger lazy seeding check
 ensureSeeded().catch(err => console.error('Error ensuring seeded:', err));
+
+// Start periodic synchronization checks (every 20 seconds) to download data generated by other devices
+if (typeof window !== 'undefined') {
+  setInterval(() => {
+    pullFromFirestoreToLocal().catch(err => {
+      console.error('[Firebase Client Sync] Periodic Firestore sync pull failed:', err);
+    });
+  }, 20000);
+}
 
 // --- CLIENT-SIDE REST ROUTER ---
 // Replicates Express API logic using localStorage fallback

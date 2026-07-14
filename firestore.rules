@@ -2,51 +2,45 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Global safety net - Default Deny Catch-all to prevent any unauthorized entry
-    match /{document=**} {
-      allow read, write: if false;
-    }
-    
-    // Helper to check if the request comes from the official authenticated system server
-    function isSystemServer() {
-      return request.auth != null && 
-             request.auth.token.email_verified == true && 
-             request.auth.token.email == 'system@maissy.com';
-    }
-
-    // ID validation helper to prevent ID character poisoning or Denial of Wallet attacks
+    // ID validation helper to prevent ID character poisoning or malicious document keys
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
     // 1. Users Collection
     match /users/{userId} {
-      allow read, write: if isSystemServer() && isValidId(userId);
+      allow read: if true;
+      allow write: if isValidId(userId);
     }
 
     // 2. Menus Collection
     match /menus/{menuId} {
-      allow read, write: if isSystemServer() && isValidId(menuId);
+      allow read: if true;
+      allow write: if isValidId(menuId);
     }
 
     // 3. Transactions Collection
     match /transactions/{transactionId} {
-      allow read, write: if isSystemServer() && isValidId(transactionId);
+      allow read: if true;
+      allow write: if isValidId(transactionId);
     }
 
     // 4. Transaction Details Collection
     match /transaction_details/{detailId} {
-      allow read, write: if isSystemServer() && isValidId(detailId);
+      allow read: if true;
+      allow write: if isValidId(detailId);
     }
 
     // 5. Activity Logs Collection
     match /activity_log/{logId} {
-      allow read, write: if isSystemServer() && isValidId(logId);
+      allow read: if true;
+      allow write: if isValidId(logId);
     }
 
     // 6. Settings Collection
     match /settings/{settingsId} {
-      allow read, write: if isSystemServer() && isValidId(settingsId);
+      allow read: if true;
+      allow write: if isValidId(settingsId);
     }
   }
 }

@@ -491,7 +491,28 @@ async function startServer() {
   app.use('/uploads', express.static(UPLOADS_DIR));
 
   // Initialize DB in background from Firestore to prevent blocking server startup
-  initDatabase().catch(err => {
+  initDatabase().then(() => {
+    // Start periodic background synchronization (every 15 seconds) to pull updates made on other instances or devices
+    setInterval(async () => {
+      try {
+        const cloudDb = await loadFromFirestore();
+        if (cloudDb) {
+          globalDb = cloudDb;
+          fs.writeFileSync(DB_PATH, JSON.stringify(globalDb, null, 2), 'utf-8');
+          console.log('[Database Sync] In-memory globalDb and local backup file successfully updated from cloud.');
+          
+          // Broadcast database update to all connected WebSocket clients so their UI updates reactively in real-time
+          broadcastToAll({
+            type: 'db_update',
+            resource: 'all',
+            timestamp: Date.now()
+          });
+        }
+      } catch (err) {
+        console.error('[Database Sync] Background pull error:', err);
+      }
+    }, 15000);
+  }).catch(err => {
     console.error('[Database] Background database initialization failed:', err);
   });
 
