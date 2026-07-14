@@ -179,8 +179,9 @@ export default function SettingsView({ currentUser }: SettingsViewProps) {
 
       const result = await res.json();
       if (result.success) {
-        alert('Pengaturan kafe berhasil disimpan dan diperbarui!');
-        fetchSettings();
+        alert('Pengaturan kafe berhasil disimpan dan diperbarui! Memulai sinkronisasi otomatis ke Server Pusat...');
+        await fetchSettings();
+        triggerCentralSync();
       }
     } catch (err) {
       console.error('Error saving settings:', err);
@@ -636,96 +637,7 @@ export default function SettingsView({ currentUser }: SettingsViewProps) {
                   />
                 </div>
 
-                {/* QRIS OWNER CONFIGURATION */}
-                <div className="sm:col-span-2 border-t border-zinc-100 dark:border-zinc-800/80 pt-5 mt-2 space-y-4">
-                  <div>
-                    <h3 className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Pengaturan QRIS Owner (Legal & Berlisensi)</h3>
-                    <p className="text-[11px] text-zinc-400 dark:text-zinc-500 leading-normal">
-                      Konfigurasikan kode QRIS pribadi milik owner toko. Kode ini otomatis akan dicetak pada struk pembelian apabila pelanggan memilih metode pembayaran QRIS. Barcode ID transaksi akan dihapus dan digantikan oleh QRIS owner ini.
-                    </p>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-                    {/* Upload QRIS Image */}
-                    <div className="md:col-span-4 space-y-2">
-                      <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 block">Gambar QRIS Owner</span>
-                      <div className="flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-[#1a1613]/50 text-center">
-                        {qrisImageUrl ? (
-                          <div className="relative group">
-                            <img 
-                              src={qrisImageUrl} 
-                              alt="QRIS Preview" 
-                              className="h-32 w-32 object-contain bg-white p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm"
-                              referrerPolicy="no-referrer"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setQrisImageUrl('')}
-                              className="absolute -top-2 -right-2 p-1.5 bg-rose-600 text-white rounded-full hover:bg-rose-700 transition shadow-md"
-                              title="Hapus gambar QRIS"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="h-32 w-32 rounded-xl flex flex-col items-center justify-center text-zinc-400 bg-zinc-100/50 dark:bg-zinc-900/50">
-                            <svg className="h-10 w-10 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v1m0 11v1m-1-6h2m-6 3h12M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2z"></path>
-                            </svg>
-                            <span className="text-[10px] mt-1.5 font-bold">Belum Ada QRIS</span>
-                          </div>
-                        )}
-                        
-                        <div className="w-full">
-                          <input 
-                            type="file" 
-                            accept="image/*"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                if (file.size > 2 * 1024 * 1024) {
-                                  alert("Ukuran gambar tidak boleh lebih dari 2MB!");
-                                  return;
-                                }
-                                resizeAndCompressImage(file, 400, 400, (compressedBase64) => {
-                                  setQrisImageUrl(compressedBase64);
-                                });
-                              }
-                            }}
-                            className="hidden" 
-                            id="qris-upload-input"
-                            disabled={!canEditGeneralSettings}
-                          />
-                          <label 
-                            htmlFor="qris-upload-input"
-                            className={`w-full text-center inline-block px-3 py-1.5 rounded-lg text-[10px] font-bold border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#25201c] text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition cursor-pointer ${!canEditGeneralSettings ? 'opacity-50 cursor-not-allowed' : ''}`}
-                          >
-                            Unggah Foto QRIS
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* QRIS Payload Text Input */}
-                    <div className="md:col-span-8 space-y-3.5">
-                      <div className="space-y-1.5">
-                        <label htmlFor="settings-qris-payload" className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400">Kode Payload Teks QRIS (Opsional untuk Bluetooth Printer)</label>
-                        <textarea
-                          id="settings-qris-payload"
-                          rows={4}
-                          value={qrisPayload}
-                          onChange={(e) => setQrisPayload(e.target.value)}
-                          placeholder="Pecahkan atau salin teks QRIS Anda di sini (contoh: 00020101021138520016ID1020211516544010303...)"
-                          disabled={!canEditGeneralSettings}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-[#25201c] text-zinc-950 dark:text-zinc-100 text-xs font-mono focus:outline-none focus:border-amber-500 transition resize-none disabled:opacity-75 disabled:cursor-not-allowed"
-                        />
-                        <p className="text-[10px] text-zinc-400 dark:text-zinc-500 leading-relaxed">
-                          * Tip: Menempelkan teks payload QRIS (biasanya diawali dengan <code className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded">000201...</code>) akan memungkinkan printer thermal bluetooth/USB mencetak kode QRIS dengan hasil yang sangat tajam dan cepat!
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
               {canEditGeneralSettings && (
