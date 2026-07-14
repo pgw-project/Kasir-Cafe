@@ -292,25 +292,7 @@ export async function printUsbReceipt(
     if (tx.Metode_Bayar === 'QRIS') {
       chunks.push(CENTER);
       chunks.push(encoder.encode('\n--- STRUK QRIS (LUNAS) ---\n'));
-      
-      const qrisData = settings?.qrisPayload;
-      if (qrisData) {
-        chunks.push(encoder.encode('Scan QR Owner di bawah:\n\n'));
-        try {
-          chunks.push(getQRCodeESC_POS(qrisData));
-        } catch (e) {
-          console.error('Failed to encode QRIS QR code:', e);
-        }
-      } else {
-        chunks.push(encoder.encode('Scan QR di bawah:\n\n'));
-        try {
-          chunks.push(getQRCodeESC_POS(tx.ID_Transaksi));
-        } catch (e) {
-          console.error('Failed to encode fallback QR code:', e);
-        }
-      }
-      
-      chunks.push(encoder.encode('\n'));
+      chunks.push(encoder.encode('Status: Pembayaran Berhasil / Lunas\n'));
       chunks.push(LEFT);
       chunks.push(encoder.encode('-'.repeat(maxChars) + '\n'));
     }

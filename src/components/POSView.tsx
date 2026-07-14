@@ -753,7 +753,7 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
                 <div id="qris-payment-panel" className="p-4 rounded-2xl bg-zinc-50 dark:bg-[#25201c] border border-zinc-200 dark:border-zinc-800/60 flex flex-col items-center justify-center text-center space-y-3">
                   <div className="flex items-center justify-between w-full">
                     <span className="text-[10px] font-bold text-zinc-400 tracking-wider uppercase">
-                      {settings?.qrisImageUrl || settings?.qrisPayload ? 'QRIS OWNER (LISENSI LEGAL)' : 'QRIS DYNAMIC (DEMO)'}
+                      QRIS DYNAMIC (DEMO)
                     </span>
                     <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-rose-500 text-white leading-none uppercase">GPN</span>
                   </div>
@@ -761,53 +761,20 @@ export default function POSView({ currentUser, addLog }: POSViewProps) {
                   {/* Stylized QRIS QR code container */}
                   <div className="p-4 rounded-2xl bg-white border border-zinc-200 shadow-sm flex flex-col items-center justify-center">
                     <div className="relative h-40 w-40 bg-zinc-50 rounded-lg flex items-center justify-center border border-zinc-100 overflow-hidden">
-                      {settings?.qrisImageUrl ? (
-                        <img 
-                          src={settings.qrisImageUrl} 
-                          alt="QRIS Owner" 
-                          className="h-full w-full object-contain p-2 bg-white"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : settings?.qrisPayload ? (
-                        <img 
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(settings.qrisPayload)}`} 
-                          alt="QRIS Payload Code" 
-                          className="h-36 w-36 object-contain p-1"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <>
-                          <QrCode className="h-28 w-28 text-zinc-900 animate-pulse" />
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="h-8 w-8 rounded-md bg-white border border-zinc-200 shadow-sm flex items-center justify-center">
-                              <span className="text-[9px] font-black text-rose-600">QRIS</span>
-                            </div>
-                          </div>
-                        </>
-                      )}
+                      <QrCode className="h-28 w-28 text-zinc-900 animate-pulse" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-8 w-8 rounded-md bg-white border border-zinc-200 shadow-sm flex items-center justify-center">
+                          <span className="text-[9px] font-black text-rose-600">QRIS</span>
+                        </div>
+                      </div>
                     </div>
-                    {settings?.qrisPayload ? (
-                      <span className="text-[7px] font-mono text-zinc-400 max-w-[150px] truncate mt-1.5 block" title={settings.qrisPayload}>
-                        Payload: {settings.qrisPayload}
-                      </span>
-                    ) : (
-                      <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mt-2 font-mono">
-                        {settings?.qrisImageUrl ? 'QRIS OWNER AKTIF' : 'NMID: ID1029384756'}
-                      </span>
-                    )}
+                    <span className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest mt-2 font-mono">
+                      NMID: ID1029384756
+                    </span>
                   </div>
 
                   <p className="text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed font-semibold">
-                    {settings?.qrisImageUrl || settings?.qrisPayload ? (
-                      <>
-                        Tunjukkan QRIS Owner ini kepada pelanggan.<br />Setelah pembayaran <strong className="text-amber-600 dark:text-amber-500 font-mono">Rp {(totalHarga || 0).toLocaleString('id-ID')}</strong> berhasil diverifikasi, klik konfirmasi di bawah.
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-rose-500 font-bold block mb-1">Peringatan: QRIS Owner belum diatur di Pengaturan!</span>
-                        Silakan upload foto QRIS berlisensi Anda di menu Pengaturan. Klik konfirmasi pembayaran QRIS di bawah untuk simulasi.
-                      </>
-                    )}
+                    Tunjukkan kode QRIS ini kepada pelanggan.<br />Setelah pembayaran <strong className="text-emerald-600 dark:text-emerald-500 font-mono">Rp {(totalHarga || 0).toLocaleString('id-ID')}</strong> berhasil diverifikasi, klik konfirmasi di bawah.
                   </p>
                 </div>
               )}
