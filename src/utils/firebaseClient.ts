@@ -163,8 +163,8 @@ function cleanUndefined(obj: any): any {
  * Pushes client-side localStorage writes directly to the central cloud Firestore database.
  */
 export async function syncLocalCollectionToFirestore(col: string, data: any) {
-  if (!db) {
-    console.warn('[Firebase Client Sync] Firestore is not initialized. Skipping cloud sync...');
+  if (!db || !window.__useClientFirebase) {
+    // Skip direct client-side writes when Express server handles syncing
     return;
   }
   try {
@@ -234,8 +234,8 @@ export async function syncLocalCollectionToFirestore(col: string, data: any) {
  * Pulls latest data from the central cloud Firestore database and saves it to localStorage.
  */
 export async function pullFromFirestoreToLocal() {
-  if (!db) {
-    console.warn('[Firebase Client Pull] Firestore is not initialized. Skipping cloud fetch...');
+  if (!db || !window.__useClientFirebase) {
+    // Skip direct client-side pulls when Express server handles pulling
     return;
   }
   console.log('[Firebase Client Pull] Fetching latest data from central cloud Firestore...');

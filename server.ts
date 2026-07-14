@@ -973,9 +973,11 @@ async function startServer() {
     
     if (userId) {
       const user = db.users.find((u: User) => u.ID_User === String(userId));
-      if (user && user.Role !== 'creator') {
-        const userCafeId = user.cafeId || 'cafe-maissy-coffee';
-        const userCafe = db.settings.cafes?.find((c: any) => c.id === userCafeId);
+      if (user) {
+        const targetCafeId = user.Role === 'creator'
+          ? (db.settings.activeCafeId || 'cafe-maissy-coffee')
+          : (user.cafeId || 'cafe-maissy-coffee');
+        const userCafe = db.settings.cafes?.find((c: any) => c.id === targetCafeId);
         if (userCafe) {
           settingsResponse = {
             ...settingsResponse,
@@ -1205,6 +1207,8 @@ async function startServer() {
     db.settings.telepon = targetCafe.telepon;
     db.settings.pesanFooter = targetCafe.pesanFooter;
     db.settings.logoUrl = targetCafe.logoUrl || '';
+    db.settings.qrisPayload = targetCafe.qrisPayload || '';
+    db.settings.qrisImageUrl = targetCafe.qrisImageUrl || '';
 
     db.activity_log.unshift({
       Timestamp: new Date().toISOString(),

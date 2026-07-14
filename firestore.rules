@@ -3,44 +3,45 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // ID validation helper to prevent ID character poisoning or malicious document keys
+    // Updated to allow dots, colons, and @ symbols for ISO timestamps and system/user email identifiers
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-\\.:@]+$');
+    }
+
+    // Helper to check if the request comes from the official authenticated system server
+    function isSystemServer() {
+      return request.auth != null && 
+             request.auth.token.email == 'system@maissy.com';
     }
 
     // 1. Users Collection
     match /users/{userId} {
-      allow read: if true;
-      allow write: if isValidId(userId);
+      allow read, write: if isSystemServer() && isValidId(userId);
     }
 
     // 2. Menus Collection
     match /menus/{menuId} {
-      allow read: if true;
-      allow write: if isValidId(menuId);
+      allow read, write: if isSystemServer() && isValidId(menuId);
     }
 
     // 3. Transactions Collection
     match /transactions/{transactionId} {
-      allow read: if true;
-      allow write: if isValidId(transactionId);
+      allow read, write: if isSystemServer() && isValidId(transactionId);
     }
 
     // 4. Transaction Details Collection
     match /transaction_details/{detailId} {
-      allow read: if true;
-      allow write: if isValidId(detailId);
+      allow read, write: if isSystemServer() && isValidId(detailId);
     }
 
     // 5. Activity Logs Collection
     match /activity_log/{logId} {
-      allow read: if true;
-      allow write: if isValidId(logId);
+      allow read, write: if isSystemServer() && isValidId(logId);
     }
 
     // 6. Settings Collection
     match /settings/{settingsId} {
-      allow read: if true;
-      allow write: if isValidId(settingsId);
+      allow read, write: if isSystemServer() && isValidId(settingsId);
     }
   }
 }
