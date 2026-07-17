@@ -210,7 +210,12 @@ export default function App() {
     }
     const fetchActiveCafeDetails = async () => {
       try {
-        const res = await fetch(`/api/settings?userId=${currentUser.ID_User}`);
+        const res = await fetch(`/api/settings?userId=${currentUser.ID_User}&t=${Date.now()}`, {
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
         if (res.ok) {
           const data = await res.json();
           if (data) {

@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { DollarSign, ShoppingBag, Award, TrendingUp, RefreshCw, Layers, Sparkles, UserCheck } from 'lucide-react';
 import { motion } from 'motion/react';
+import { pullFromFirestoreToLocal } from '../utils/firebaseClient';
 
 interface DashboardViewProps {
   currentUser: any;
@@ -39,7 +40,19 @@ export default function DashboardView({ currentUser, onNavigate }: DashboardView
   const fetchAnalytics = async () => {
     try {
       setRefreshing(true);
-      const res = await fetch(`/api/reports/analytics?userId=${currentUser?.ID_User || ''}`);
+      if (window.__useClientFirebase) {
+        try {
+          await pullFromFirestoreToLocal();
+        } catch (pullErr) {
+          console.error('[Dashboard] Error pulling data from Firestore during refresh:', pullErr);
+        }
+      }
+      const res = await fetch(`/api/reports/analytics?userId=${currentUser?.ID_User || ''}&t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       const json = await res.json();
       setData(json);
     } catch (err) {

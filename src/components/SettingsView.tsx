@@ -109,7 +109,12 @@ export default function SettingsView({ currentUser }: SettingsViewProps) {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/settings?userId=${currentUser?.ID_User}`);
+      const res = await fetch(`/api/settings?userId=${currentUser?.ID_User}&t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       const data: Settings = await res.json();
       setSettings(data);
       

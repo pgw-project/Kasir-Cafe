@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Search, RefreshCw, AlertCircle, History } from 'lucide-react';
+import { pullFromFirestoreToLocal } from '../utils/firebaseClient';
 
 export default function AuditLogView() {
   const [logs, setLogs] = useState<any[]>([]);
@@ -14,7 +15,19 @@ export default function AuditLogView() {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/logs');
+      if (window.__useClientFirebase) {
+        try {
+          await pullFromFirestoreToLocal();
+        } catch (pullErr) {
+          console.error('[AuditLog] Error pulling data from Firestore during refresh:', pullErr);
+        }
+      }
+      const res = await fetch(`/api/logs?t=${Date.now()}`, {
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       const data = await res.json();
       setLogs(data);
     } catch (err) {

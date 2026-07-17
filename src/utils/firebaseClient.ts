@@ -163,6 +163,11 @@ const getLocalDb = () => {
         syncLocalToCentralServer(col, data).catch(err => {
           console.error(`[Local DB Sync] Async central webhook sync failed for '${col}':`, err);
         });
+        
+        // Dispatch standard update event to trigger reactive rendering across components in client-side fallback mode
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('ws_db_update', { detail: { type: 'db_update', resource: col } }));
+        }
       } catch (e) {
         console.error(`[Local DB] Error saving ${col}:`, e);
       }
@@ -876,8 +881,22 @@ export const clientFirebaseRouter = {
         if (!settings.cafes) {
           settings.cafes = [];
         }
-        const cafeIndex = settings.cafes.findIndex((c: any) => c.id === actorCafeId);
-        if (cafeIndex !== -1) {
+        let cafeIndex = settings.cafes.findIndex((c: any) => c.id === actorCafeId);
+        if (cafeIndex === -1) {
+          // Self-healing: Create the cafe if it doesn't exist yet!
+          const newCafe = {
+            id: actorCafeId,
+            namaToko: namaToko || 'Maissy Coffee',
+            alamat: alamat || '',
+            telepon: telepon || '',
+            pesanFooter: pesanFooter || '',
+            logoUrl: logoUrl || '',
+            qrisPayload: qrisPayload || '',
+            qrisImageUrl: qrisImageUrl || '',
+          };
+          settings.cafes.push(newCafe);
+          cafeIndex = settings.cafes.length - 1;
+        } else {
           settings.cafes[cafeIndex] = {
             ...settings.cafes[cafeIndex],
             namaToko: namaToko || settings.cafes[cafeIndex].namaToko,
@@ -888,17 +907,17 @@ export const clientFirebaseRouter = {
             qrisPayload: qrisPayload !== undefined ? qrisPayload : settings.cafes[cafeIndex].qrisPayload,
             qrisImageUrl: qrisImageUrl !== undefined ? qrisImageUrl : settings.cafes[cafeIndex].qrisImageUrl,
           };
+        }
 
-          // If this is the active cafe, ALSO update the top-level settings so they are in sync!
-          if (settings.activeCafeId === actorCafeId) {
-            settings.namaToko = settings.cafes[cafeIndex].namaToko;
-            settings.alamat = settings.cafes[cafeIndex].alamat;
-            settings.telepon = settings.cafes[cafeIndex].telepon;
-            settings.pesanFooter = settings.cafes[cafeIndex].pesanFooter;
-            settings.logoUrl = settings.cafes[cafeIndex].logoUrl;
-            settings.qrisPayload = settings.cafes[cafeIndex].qrisPayload;
-            settings.qrisImageUrl = settings.cafes[cafeIndex].qrisImageUrl;
-          }
+        // If this is the active cafe, ALSO update the top-level settings so they are in sync!
+        if (settings.activeCafeId === actorCafeId) {
+          settings.namaToko = settings.cafes[cafeIndex].namaToko;
+          settings.alamat = settings.cafes[cafeIndex].alamat;
+          settings.telepon = settings.cafes[cafeIndex].telepon;
+          settings.pesanFooter = settings.cafes[cafeIndex].pesanFooter;
+          settings.logoUrl = settings.cafes[cafeIndex].logoUrl;
+          settings.qrisPayload = settings.cafes[cafeIndex].qrisPayload;
+          settings.qrisImageUrl = settings.cafes[cafeIndex].qrisImageUrl;
         }
       } else {
         // Creator updating global settings
